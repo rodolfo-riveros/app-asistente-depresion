@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { AuthState, User, LoginPayload, RegisterPayload } from '../types/auth';
 import { authService } from '../services/auth';
+import { setUnauthorizedHandler } from '../services/api';
 
 interface AuthContextType extends AuthState {
   login: (payload: LoginPayload) => Promise<void>;
@@ -30,6 +31,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
     initAuth();
+  }, []);
+
+  // Si Supabase rechaza el token (vencido o revocado), se limpia la sesión
+  // local para que el usuario vuelva al login en vez de quedar en un limbo.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      authService.logout();
+      setUser(null);
+      setToken(null);
+    });
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   const login = async (payload: LoginPayload) => {

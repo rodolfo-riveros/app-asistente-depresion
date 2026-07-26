@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TextInputProps, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
+import { Glass } from './Glass';
 
 interface AuthInputProps extends TextInputProps {
   label: string;
@@ -22,21 +22,17 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  const borderStyle = useAnimatedStyle(() => {
-    const borderColor = focused
-      ? colors.glassBorderActive
-      : error
-        ? colors.error
-        : colors.glassBorder;
-    return {
-      borderColor: withSpring(borderColor, { stiffness: 400, damping: 25 }),
-    };
-  });
+  const borderColor = error ? colors.error : focused ? colors.glassBorderActive : colors.borderDark;
 
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
-      <Animated.View style={[styles.inputContainer, borderStyle]}>
+      <Glass
+        level="low"
+        radius={spacing.borderRadiusLg}
+        borderColor={borderColor}
+        glowColor={focused && !error ? colors.primary : undefined}
+        contentStyle={styles.inputRow}>
         <TextInput
           style={styles.input}
           placeholderTextColor={colors.textMuted}
@@ -51,15 +47,16 @@ export const AuthInput: React.FC<AuthInputProps> = ({
         {showToggle && (
           <Pressable
             onPress={() => setVisible((prev) => !prev)}
+            hitSlop={12}
             style={({ pressed }) => [styles.eyeBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons
               name={visible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={colors.textMuted}
+              color={focused ? colors.primary : colors.textMuted}
             />
           </Pressable>
         )}
-      </Animated.View>
+      </Glass>
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
@@ -76,27 +73,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: 0.4,
   },
-  inputContainer: {
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(248, 250, 252, 0.92)',
-    borderWidth: 1,
-    borderRadius: spacing.borderRadiusLg,
-    overflow: 'hidden',
+    minHeight: 52,
+    paddingHorizontal: 16,
   },
   input: {
     flex: 1,
-    paddingHorizontal: spacing.inputPaddingHorizontal,
-    paddingVertical: spacing.inputPaddingVertical,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     color: colors.textPrimary,
     fontSize: 15,
+    includeFontPadding: false,
   },
   eyeBtn: {
-    paddingHorizontal: spacing.inputPaddingHorizontal,
+    width: 52,
+    height: 52,
+    marginLeft: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   error: {
     fontSize: 12,
     color: colors.error,

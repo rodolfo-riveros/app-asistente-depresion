@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ChatNavigator } from './ChatNavigator';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { colors } from '../constants/colors';
+import { glassTint } from '../constants/glass';
 
 const Tab = createBottomTabNavigator();
 
@@ -16,23 +18,27 @@ export const AppNavigator: React.FC = () => {
         headerShown: false,
         tabBarShowLabel: true,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.textPrimary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
+        tabBarHideOnKeyboard: true,
+        // Mismo aspecto de antes; el blur real lo pone expo-blur (backdropFilter
+        // sólo funcionaba en web y RN no lo tipa).
+        tabBarBackground: () => <BlurView intensity={24} tint={glassTint} style={styles.tabBlur} />,
         tabBarIcon: ({ focused }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'chatbubble-ellipses-outline';
-          if (route.name === 'ChatTab') iconName = 'chatbubble-ellipses-outline';
-          else if (route.name === 'HistoryTab') iconName = 'bar-chart-outline';
-          else if (route.name === 'ProfileTab') iconName = 'person-outline';
+          if (route.name === 'ChatTab')
+            iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
+          else if (route.name === 'HistoryTab')
+            iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+          else if (route.name === 'ProfileTab') iconName = focused ? 'person' : 'person-outline';
 
           return (
-            <View style={[styles.iconContainer, focused && styles.iconActive]}>
-              <Ionicons
-                name={iconName}
-                size={20}
-                color={focused ? colors.primary : colors.textMuted}
-              />
-            </View>
+            <Ionicons
+              name={iconName}
+              size={22}
+              color={focused ? colors.textPrimary : colors.textMuted}
+            />
           );
         },
       })}>
@@ -45,27 +51,32 @@ export const AppNavigator: React.FC = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTopColor: colors.borderDark,
-    borderTopWidth: 1,
+    position: 'absolute',
+    bottom: 16,
+    left: 50,
+    right: 50,
     height: 64,
-    paddingBottom: 8,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderTopWidth: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
     paddingTop: 6,
-    elevation: 10,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: -4 },
+    paddingBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  tabBlur: {
+    flex: 1,
+    borderRadius: 32,
+    overflow: 'hidden',
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-  },
-  iconContainer: {
-    padding: 4,
-    borderRadius: 12,
-  },
-  iconActive: {
-    backgroundColor: 'rgba(13, 148, 136, 0.1)',
+    marginTop: 1,
   },
 });

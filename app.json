@@ -14,7 +14,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash.png",
-          "backgroundColor": "#f8fafc"
+          "backgroundColor": "#0b1326"
         }
       ],
       [
@@ -22,11 +22,18 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Permite a la aplicación acceder a tu ubicación para encontrar Centros de Salud Mental Comunitarios cercanos en Cusco durante una situación de apoyo."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Permite grabar tu voz para que puedas conversar hablando con el asistente en lugar de escribir."
+        }
       ]
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b1326",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
@@ -37,9 +44,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f8fafc"
+        "backgroundColor": "#EDF4F3"
       },
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "RECORD_AUDIO"]
     }
   }
 }

@@ -1,28 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, Text, FlatList, Pressable, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { SpatialContainer } from '../../components/SpatialContainer';
 import { GlassCard } from '../../components/GlassCard';
 import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { formatters } from '../../utils/formatters';
 import { storage } from '../../utils/storage';
+import { api } from '../../services/api';
 import { HamiltonResult } from '../../types/chat';
 
 export const HistoryScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [history, setHistory] = useState<HamiltonResult[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadHistory = async () => {
-    setRefreshing(true);
-    const data = await storage.getHistory();
-    setHistory(data);
-    setRefreshing(false);
-  };
+  /**
+   * Fuente de verdad: el backend (Supabase). Si no hay red o la sesión venció,
+   * se muestra la caché local de AsyncStorage para no dejar la pantalla vacía.
+   */
+  const loadHistory = useCallback(async (mostrarSpinner = true) => {
+    // La caché se lee primero a propósito: así ningún setState ocurre de forma
+    // síncrona al llamar esto desde un efecto.
+    const cache = await storage.getHistory();
+    if (mostrarSpinner) setRefreshing(true);
 
-  useEffect(() => {
-    storage.getHistory().then(setHistory);
+    try {
+      const data = await api.getEvaluaciones();
+      setHistory(data);
+      setError(null);
+    } catch (e) {
+      setHistory(cache);
+      setError(
+        cache.length > 0
+          ? 'Mostrando tu histórico guardado en este dispositivo (sin conexión al servidor).'
+          : e instanceof Error
+            ? e.message
+            : 'No se pudo cargar tu histórico.'
+      );
+    } finally {
+      if (mostrarSpinner) setRefreshing(false);
+    }
   }, []);
+
+  // Se recarga al entrar a la pestaña: si acabas de terminar una evaluación,
+  // aparece aquí sin tener que hacer pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory(false);
+    }, [loadHistory])
+  );
 
   const handleSelectItem = (item: HamiltonResult) => {
     navigation.navigate('ChatTab', {
@@ -41,9 +69,16 @@ export const HistoryScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
           </Text>
         </View>
 
+        {error ? (
+          <View style={styles.noticeRow}>
+            <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.noticeText}> {error}</Text>
+          </View>
+        ) : null}
+
         {history.length === 0 ? (
-          <GlassCard style={styles.emptyCard}>
-            <Ionicons name="bar-chart-outline" size={48} color={colors.textMuted} />
+          <GlassCard style={styles.emptyCard} contentStyle={styles.emptyContent}>
+            <Ionicons name="bar-chart-outline" size={48} color={colors.primary} />
             <Text style={styles.emptyTitle}>Aún no hay conversaciones</Text>
             <Text style={styles.emptySub}>
               Inicia una conversación con Amiga Hamilton. Tus momentos compartidos aparecerán aquí.
@@ -56,7 +91,7 @@ export const HistoryScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
-                onRefresh={loadHistory}
+                onRefresh={() => loadHistory()}
                 tintColor={colors.primary}
               />
             }
@@ -71,7 +106,7 @@ export const HistoryScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
                       <View
                         style={[
                           styles.badge,
-                          { backgroundColor: `${badgeColor}15`, borderColor: badgeColor },
+                          { backgroundColor: `${badgeColor}22`, borderColor: badgeColor },
                         ]}>
                         <Text style={[styles.badgeText, { color: badgeColor }]}>{item.nivel}</Text>
                       </View>
@@ -118,16 +153,29 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  noticeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  noticeText: {
+    flexShrink: 1,
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 16,
+  },
   emptyCard: {
-    alignItems: 'center',
-    padding: spacing.xl,
     marginTop: spacing.lg,
   },
-
+  emptyContent: {
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
   emptyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    marginTop: spacing.md,
     marginBottom: 4,
   },
   emptySub: {
@@ -137,7 +185,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   listContent: {
-    paddingBottom: spacing.xxl,
+    paddingBottom: 100,
   },
   historyCard: {
     marginBottom: spacing.md,
@@ -169,13 +217,13 @@ const styles = StyleSheet.create({
   scoreBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(241, 245, 249, 0.9)',
+    backgroundColor: colors.surfaceInset,
     width: 48,
     height: 48,
     borderRadius: 24,
     marginRight: spacing.md,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: colors.borderDark,
   },
   scoreNum: {
     fontSize: 18,

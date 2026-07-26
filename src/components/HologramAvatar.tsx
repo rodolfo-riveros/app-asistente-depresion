@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
-  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
 import { colors } from '../constants/colors';
+import { glassGlow } from '../constants/glass';
+
+const avatarImage = require('../../assets/avatar.png');
 
 type Emotion = 'listening' | 'empathetic' | 'concerned' | 'inspiring' | 'neutral';
 
@@ -18,58 +20,45 @@ interface HologramAvatarProps {
   typing?: boolean;
   voiceMode?: boolean;
   onPress?: () => void;
+  size?: 'sm' | 'lg';
 }
 
 const emotionColors: Record<Emotion, string> = {
   listening: colors.accent,
-  empathetic: colors.danger,
+  empathetic: colors.accent,
   concerned: colors.warning,
   inspiring: colors.primary,
   neutral: colors.primary,
 };
 
-const Ring: React.FC<{ delay: number; color: string; size: number }> = ({ delay, color, size }) => {
-  const opacity = useSharedValue(0.4);
-  const scale = useSharedValue(1);
+/** Halo único, lento y de baja opacidad. Sustituye a los anillos concéntricos. */
+const Halo: React.FC<{ color: string; size: number; active: boolean }> = ({
+  color,
+  size,
+  active,
+}) => {
+  const pulse = useSharedValue(0);
 
   useEffect(() => {
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.6, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
-      ),
+    pulse.value = withRepeat(
+      withTiming(1, { duration: active ? 1400 : 2600, easing: Easing.inOut(Easing.ease) }),
       -1,
       true
     );
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.15, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
-    );
-  }, []);
+  }, [pulse, active]);
 
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: 0.1 + pulse.value * (active ? 0.22 : 0.12),
+    transform: [{ scale: 1 + pulse.value * 0.1 }],
   }));
 
   return (
     <Animated.View
       pointerEvents="none"
       style={[
-        styles.ring,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderColor: color,
-          marginLeft: -delay,
-          marginTop: -delay,
-        },
-        ringStyle,
+        styles.halo,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
+        haloStyle,
       ]}
     />
   );
@@ -80,21 +69,23 @@ export const HologramAvatar: React.FC<HologramAvatarProps> = ({
   typing = false,
   voiceMode = false,
   onPress,
+  size = 'lg',
 }) => {
   const color = emotionColors[emotion];
-  const avatarSize = 72;
-  const ringBase = avatarSize + 16;
+  const isSmall = size === 'sm';
+  const avatarSize = isSmall ? 40 : 76;
+  const haloSize = avatarSize + (isSmall ? 16 : 44);
+  const iconSize = isSmall ? 18 : 32;
 
   return (
-    <Pressable onPress={onPress} style={styles.wrapper}>
-      <View style={styles.ringContainer}>
-        <Ring delay={0} color={color} size={ringBase} />
-        <Ring delay={200} color={color} size={ringBase + 20} />
-        <Ring delay={400} color={color} size={ringBase + 40} />
+    <Pressable onPress={onPress} style={isSmall ? styles.wrapperSmall : styles.wrapper}>
+      <View style={[styles.stack, { width: haloSize, height: haloSize }]}>
+        <Halo color={color} size={haloSize} active={typing || voiceMode} />
 
         <View
           style={[
             styles.avatar,
+            glassGlow(color, isSmall ? 12 : 24),
             {
               width: avatarSize,
               height: avatarSize,
@@ -102,10 +93,15 @@ export const HologramAvatar: React.FC<HologramAvatarProps> = ({
               borderColor: color,
             },
           ]}>
-          <Ionicons
-            name={voiceMode ? 'mic' : typing ? 'chatbubble-ellipses-outline' : 'heart-outline'}
-            size={32}
-            color={color}
+          <Image
+            source={avatarImage}
+            style={{
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: avatarSize / 2,
+              top: -4,
+            }}
+            resizeMode="cover"
           />
         </View>
       </View>
@@ -124,38 +120,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
   },
-  ringContainer: {
-    width: 130,
-    height: 130,
+  wrapperSmall: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ring: {
+  stack: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  halo: {
     position: 'absolute',
-    borderWidth: 1.5,
   },
   avatar: {
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 2,
+    backgroundColor: colors.glassBgLight,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
   },
   voiceBadge: {
     position: 'absolute',
-    bottom: 12,
-    right: 16,
-    backgroundColor: colors.accent,
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primaryStrong,
     width: 22,
     height: 22,
     borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.glassBorderStrong,
   },
 });

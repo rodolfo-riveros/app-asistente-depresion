@@ -1,8 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, Text, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
+import { Glass, GlassScrim } from './Glass';
 
 interface LocationPermissionModalProps {
   visible: boolean;
@@ -16,10 +18,10 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
   onDeny,
 }) => {
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <Ionicons name="location-outline" size={40} color={colors.primary} style={styles.icon} />
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+      <GlassScrim>
+        <Glass level="high" style={styles.card} contentStyle={styles.cardContent}>
+          <Ionicons name="navigate-outline" size={36} color={colors.primary} style={styles.icon} />
           <Text style={styles.title}>Compartir Ubicación</Text>
           <Text style={styles.description}>
             Para mostrarte los centros de salud mental más cercanos en Cusco, necesitamos acceder a
@@ -27,45 +29,42 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
           </Text>
           <View style={styles.actions}>
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.denyButton,
-                pressed && { opacity: 0.8 },
-              ]}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.button, styles.denyButton, pressed && styles.pressed]}
               onPress={onDeny}>
               <Text style={styles.denyText}>Ahora no</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.button,
-                styles.grantButton,
-                pressed && { opacity: 0.85 },
+                styles.grantWrapper,
+                pressed && styles.pressed,
               ]}
               onPress={onGrant}>
-              <Text style={styles.grantText}>Sí, compartir</Text>
+              <LinearGradient
+                colors={colors.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.grantFill}>
+                <Text style={styles.grantText}>Sí, compartir</Text>
+              </LinearGradient>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Glass>
+      </GlassScrim>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.screenPadding,
-  },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: spacing.borderRadiusXl,
+    width: '100%',
+    maxWidth: 330,
+  },
+  cardContent: {
     padding: spacing.cardPadding,
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 320,
   },
   icon: {
     marginBottom: spacing.md,
@@ -89,26 +88,38 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: spacing.borderRadiusSm,
-    alignItems: 'center',
+    borderRadius: spacing.borderRadiusMd,
+    overflow: 'hidden',
   },
   denyButton: {
-    backgroundColor: colors.surfaceLow,
+    backgroundColor: colors.surfaceInset,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
     marginRight: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   denyText: {
     color: colors.textSecondary,
     fontWeight: '600',
     fontSize: 14,
   },
-  grantButton: {
-    backgroundColor: colors.primary,
+  grantWrapper: {
     marginLeft: 8,
+  },
+  grantFill: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderRadius: spacing.borderRadiusMd,
   },
   grantText: {
     color: colors.onPrimary,
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

@@ -12,12 +12,12 @@ export interface ChatMessageResponse {
   respuesta: string;
   test_completo: boolean;
   protocolo_crisis_activo: boolean;
-  status?: 'typing' | 'done';
+  /** El backend pide que la app solicite permiso de ubicación al usuario. */
+  ubicacion_solicitada?: boolean;
+  /** Sólo llega en el turno en que el asistente cierra la evaluación. */
   resultado?: HamiltonResult;
 }
 
 export interface HealthResponse {
   status: string;
-  app: string;
-  timestamp: string;
 }

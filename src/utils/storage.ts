@@ -4,6 +4,7 @@ const KEYS = {
   AUTH_TOKEN: '@auth_token',
   USER_DATA: '@user_data',
   EVALUATION_HISTORY: '@eval_history',
+  ONBOARDED: '@onboarded',
 };
 
 export const storage = {
@@ -17,6 +18,7 @@ export const storage = {
   },
 
   async setToken(token: string): Promise<void> {
+    if (!token) return;
     try {
       await AsyncStorage.setItem(KEYS.AUTH_TOKEN, token);
     } catch (e) {
@@ -43,6 +45,7 @@ export const storage = {
   },
 
   async setUser(user: any): Promise<void> {
+    if (!user) return;
     try {
       await AsyncStorage.setItem(KEYS.USER_DATA, JSON.stringify(user));
     } catch (e) {
@@ -75,6 +78,23 @@ export const storage = {
       await AsyncStorage.setItem(KEYS.EVALUATION_HISTORY, JSON.stringify(updated));
     } catch (e) {
       console.error('Error saving evaluation:', e);
+    }
+  },
+
+  async isOnboarded(): Promise<boolean> {
+    try {
+      const val = await AsyncStorage.getItem(KEYS.ONBOARDED);
+      return val === 'true';
+    } catch {
+      return false;
+    }
+  },
+
+  async setOnboarded(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(KEYS.ONBOARDED, 'true');
+    } catch (e) {
+      console.error('Error saving onboarded flag:', e);
     }
   },
 };

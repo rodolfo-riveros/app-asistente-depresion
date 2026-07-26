@@ -1,3 +1,5 @@
+import { colors } from '../constants/colors';
+
 export const formatters = {
   formatTime(dateStringOrObject: string | Date): string {
     const d =
@@ -17,18 +19,20 @@ export const formatters = {
     });
   },
 
+  // Escala de severidad: teal -> azul acero -> ámbar -> rojo.
+  // Todos cumplen >= 4.5:1 sobre `colors.background` (#EDF4F3).
   getSeverityColor(nivel?: string): string {
     switch (nivel) {
       case 'Sin depresión':
-        return '#4ae176'; // Spatial Secondary Green
+        return colors.primary; // teal calma
       case 'Depresión leve':
-        return '#98cbff'; // Spatial Primary Luminous Blue
+        return colors.accent; // azul acero
       case 'Depresión moderada':
-        return '#8f92ff'; // Spatial Tertiary Violet
+        return colors.warning; // ámbar
       case 'Depresión severa':
-        return '#ffb4ab'; // Spatial Crisis Error Coral
+        return colors.danger; // rojo sobrio
       default:
-        return '#98cbff';
+        return colors.accent;
     }
   },
 };

@@ -1,8 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
+import { Glass, GlassScrim } from './Glass';
 
 interface CrisisAlertProps {
   onClose: () => void;
@@ -21,17 +23,25 @@ export const CrisisAlert: React.FC<CrisisAlertProps> = ({ onClose, onRequestLoca
   };
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.card}>
+    <GlassScrim style={styles.overlay}>
+      <Glass
+        level="high"
+        style={styles.card}
+        contentStyle={styles.cardContent}
+        borderColor={colors.dangerBorder}
+        glowColor={colors.danger}>
         <View style={styles.header}>
           <View style={styles.badge}>
-            <Ionicons name="heart" size={14} color={colors.danger} />
+            <Ionicons name="shield-checkmark" size={14} color={colors.danger} />
             <Text style={styles.badgeText}> Estamos contigo</Text>
           </View>
           <Pressable
             onPress={onClose}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}>
-            <Ionicons name="close" size={20} color={colors.textMuted} />
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
+            hitSlop={8}
+            style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}>
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
 
@@ -48,16 +58,24 @@ export const CrisisAlert: React.FC<CrisisAlertProps> = ({ onClose, onRequestLoca
           </View>
           <View style={styles.helplineActions}>
             <Pressable
-              style={({ pressed }) => [styles.secondaryAction, pressed && { opacity: 0.8 }]}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.secondaryAction, pressed && styles.pressed]}
               onPress={() => handleCopy('113')}>
               <Ionicons name="copy-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.secondaryActionText}> Copiar</Text>
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.primaryAction, pressed && { opacity: 0.85 }]}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
               onPress={() => handleCall('113')}>
-              <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
-              <Text style={styles.primaryActionText}> Llamar 113</Text>
+              <LinearGradient
+                colors={colors.dangerGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionFill}>
+                <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
+                <Text style={styles.primaryActionText}> Llamar 113</Text>
+              </LinearGradient>
             </Pressable>
           </View>
         </View>
@@ -68,45 +86,50 @@ export const CrisisAlert: React.FC<CrisisAlertProps> = ({ onClose, onRequestLoca
             <Text style={styles.helplineDesc}>Sistema de Atención Médica de Urgencia</Text>
           </View>
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.primaryAction,
               { alignSelf: 'flex-end' },
-              pressed && { opacity: 0.85 },
+              pressed && styles.pressed,
             ]}
             onPress={() => handleCall('106')}>
-            <Ionicons name="medkit-outline" size={16} color={colors.onPrimary} />
-            <Text style={styles.primaryActionText}> Llamar 106</Text>
+            <LinearGradient
+              colors={colors.warningGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionFill}>
+              <Ionicons name="medkit-outline" size={16} color={colors.onPrimary} />
+              <Text style={styles.primaryActionText}> Llamar 106</Text>
+            </LinearGradient>
           </Pressable>
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.locationButton, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.locationButton, pressed && styles.pressed]}
           onPress={onRequestLocation}>
-          <Ionicons name="location-outline" size={16} color={colors.primary} />
+          <Ionicons name="navigate-outline" size={16} color={colors.primary} />
           <Text style={styles.locationButtonText}> Buscar Centros Cercanos en Cusco</Text>
         </Pressable>
-      </View>
-    </View>
+      </Glass>
+    </GlassScrim>
   );
 };
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'center',
-    padding: spacing.screenPadding,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 100,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: spacing.borderRadiusXl,
+    width: '100%',
+  },
+  cardContent: {
     padding: spacing.cardPadding,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -118,6 +141,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.dangerBg,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -131,7 +156,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.surfaceLow,
+    backgroundColor: colors.surfaceInset,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -148,7 +175,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   helplineCard: {
-    backgroundColor: colors.surfaceLow,
+    backgroundColor: colors.surfaceInset,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
     borderRadius: spacing.borderRadiusMd,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -174,10 +203,12 @@ const styles = StyleSheet.create({
   secondaryAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: spacing.borderRadiusSm,
+    borderRadius: spacing.borderRadiusMd,
     marginRight: 8,
   },
   secondaryActionText: {
@@ -186,12 +217,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   primaryAction: {
+    borderRadius: spacing.borderRadiusMd,
+    overflow: 'hidden',
+  },
+  actionFill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.accent,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: spacing.borderRadiusSm,
   },
   primaryActionText: {
     color: colors.onPrimary,
@@ -204,7 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: colors.glassBorderActive,
     paddingVertical: 12,
     borderRadius: spacing.borderRadiusMd,
     marginTop: spacing.sm,
@@ -213,5 +246,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

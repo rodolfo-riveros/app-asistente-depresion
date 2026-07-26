@@ -4,8 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChatMessage } from '../types/chat';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
+import { glassShadow, glassHighlightGradient } from '../constants/glass';
 import { formatters } from '../utils/formatters';
 import { AvatarAssistant } from './AvatarAssistant';
+import { Glass } from './Glass';
 
 interface ChatBubbleProps {
   message: ChatMessage;
@@ -19,9 +21,13 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
       <View style={styles.assistantRow}>
         <AvatarAssistant size="sm" emotion={message.emotion || 'empathetic'} />
         <View style={styles.assistantContainer}>
-          <View style={styles.assistantBubble}>
+          <Glass
+            level="base"
+            radius={spacing.borderRadiusLg}
+            radiusStyle={styles.assistantRadius}
+            contentStyle={styles.bubbleContent}>
             <Text style={styles.assistantText}>{message.content}</Text>
-          </View>
+          </Glass>
           <Text style={styles.timestampLeft}>{formatters.formatTime(message.timestamp)}</Text>
         </View>
       </View>
@@ -36,6 +42,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.userBubble}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={glassHighlightGradient}
+            style={styles.userHighlight}
+          />
           <Text style={styles.userText}>{message.content}</Text>
         </LinearGradient>
         <Text style={styles.timestampRight}>{formatters.formatTime(message.timestamp)}</Text>
@@ -55,21 +66,15 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     flexShrink: 1,
   },
-  assistantBubble: {
-    backgroundColor: colors.assistantBg,
-    borderColor: colors.assistantBorder,
-    borderWidth: 1,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: spacing.borderRadiusMd,
-    borderBottomLeftRadius: spacing.borderRadiusMd,
-    borderBottomRightRadius: spacing.borderRadiusMd,
+  assistantRadius: {
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: spacing.borderRadiusLg,
+    borderBottomLeftRadius: spacing.borderRadiusLg,
+    borderBottomRightRadius: spacing.borderRadiusLg,
+  },
+  bubbleContent: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
   },
   assistantText: {
     color: colors.assistantText,
@@ -87,17 +92,23 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   userBubble: {
-    borderTopLeftRadius: spacing.borderRadiusMd,
-    borderTopRightRadius: 4,
-    borderBottomLeftRadius: spacing.borderRadiusMd,
-    borderBottomRightRadius: spacing.borderRadiusMd,
+    borderTopLeftRadius: spacing.borderRadiusLg,
+    borderTopRightRadius: 6,
+    borderBottomLeftRadius: spacing.borderRadiusLg,
+    borderBottomRightRadius: spacing.borderRadiusLg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...glassShadow.low,
+  },
+  userHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
   },
   userText: {
     color: colors.userText,

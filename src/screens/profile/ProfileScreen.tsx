@@ -6,6 +6,7 @@ import { GlassCard } from '../../components/GlassCard';
 import { AuthButton } from '../../components/AuthButton';
 import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
+import { glassGlow } from '../../constants/glass';
 import { useAuth } from '../../hooks/useAuth';
 
 export const ProfileScreen: React.FC = () => {
@@ -33,7 +34,7 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Account Details GlassCard */}
-        <GlassCard style={styles.sectionCard}>
+        <GlassCard level="low" radius={0} style={styles.sectionCard} contentStyle={styles.sectionCardContent}>
           <Text style={styles.sectionTitle}>Información de la Cuenta</Text>
 
           <View style={styles.detailRow}>
@@ -46,7 +47,7 @@ export const ProfileScreen: React.FC = () => {
         </GlassCard>
 
         {/* Emergency Helplines Card */}
-        <GlassCard style={styles.sectionCard} glowColor={colors.glassBorder}>
+        <GlassCard level="low" radius={0} style={styles.sectionCard} contentStyle={styles.sectionCardContent}>
           <Text style={styles.sectionTitle}>Líneas de Emergencia</Text>
           <View style={styles.emergencyRow}>
             <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
@@ -63,7 +64,7 @@ export const ProfileScreen: React.FC = () => {
         </GlassCard>
 
         {/* Logout Button */}
-        <AuthButton label="Cerrar Sesión" onPress={handleLogout} style={styles.logoutBtn} />
+        <AuthButton variant="danger" label="Cerrar Sesión" onPress={handleLogout} />
       </ScrollView>
     </SpatialContainer>
   );
@@ -72,7 +73,7 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.screenPadding,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 100,
   },
   profileHeader: {
     alignItems: 'center',
@@ -83,16 +84,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-    borderColor: colors.primary,
-    borderWidth: 2,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.glassBorderActive,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
+    ...glassGlow(colors.primary, 20),
   },
   avatarInitial: {
     fontSize: 34,
@@ -111,6 +109,10 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     marginBottom: spacing.md,
+  },
+  sectionCardContent: {
+    padding: 20,
+    gap: 10,
   },
   sectionTitle: {
     fontSize: 16,
@@ -141,10 +143,12 @@ const styles = StyleSheet.create({
   verifiedChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    backgroundColor: colors.accentLight,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   verifiedText: {
     color: colors.accent,
@@ -159,9 +163,5 @@ const styles = StyleSheet.create({
   emergencyItem: {
     fontSize: 14,
     color: colors.textSecondary,
-  },
-  logoutBtn: {
-    backgroundColor: colors.danger,
-    marginTop: spacing.lg,
   },
 });

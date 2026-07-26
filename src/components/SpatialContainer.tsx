@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { StyleSheet, View, StatusBar, StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, StatusBar, StyleProp, ViewStyle, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
@@ -15,53 +15,51 @@ export const SpatialContainer: React.FC<SpatialContainerProps> = ({
   style,
   variant = 'normal',
 }) => {
-  const gradientColors = variant === 'crisis' ? colors.crisisGradient : colors.spaceGradient;
+  const isCrisis = variant === 'crisis';
+  const overlayColors = isCrisis
+    ? ['rgba(26, 10, 10, 0.80)', 'rgba(30, 45, 68, 0.70)', 'rgba(16, 26, 45, 0.80)']
+    : ['rgba(16, 26, 45, 0.88)', 'rgba(23, 36, 58, 0.80)', 'rgba(26, 26, 53, 0.88)'];
+  const topGlow = isCrisis ? colors.glowCrisis : colors.softGlow;
+  const topGlowSoft = isCrisis ? colors.glowCrisisSoft : colors.glowPrimarySoft;
 
   return (
-    <LinearGradient colors={gradientColors} style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <View style={[styles.orb, styles.orbTopRight]} pointerEvents="none" />
-      <View style={[styles.orb, styles.orbBottomLeft]} pointerEvents="none" />
-      <View style={[styles.orb, styles.orbCenter]} pointerEvents="none" />
+      <LinearGradient
+        colors={overlayColors}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <LinearGradient
+        pointerEvents="none"
+        colors={[topGlow, topGlowSoft]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.55 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <LinearGradient
+        pointerEvents="none"
+        colors={[colors.glowSecondarySoft, colors.glowSecondary]}
+        start={{ x: 0.2, y: 0.45 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
 
       <SafeAreaView style={[styles.safeArea, style]}>{children}</SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#242a3c',
   },
   safeArea: {
     flex: 1,
-  },
-  orb: {
-    position: 'absolute',
-    borderRadius: 200,
-    opacity: 0.3,
-  },
-  orbTopRight: {
-    width: 320,
-    height: 320,
-    top: -100,
-    right: -100,
-    backgroundColor: colors.primary,
-  },
-  orbBottomLeft: {
-    width: 350,
-    height: 350,
-    bottom: -120,
-    left: -120,
-    backgroundColor: colors.tertiary,
-  },
-  orbCenter: {
-    width: 200,
-    height: 200,
-    top: '40%',
-    right: -60,
-    backgroundColor: colors.secondary,
   },
 });

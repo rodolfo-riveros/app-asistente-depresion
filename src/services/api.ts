@@ -1,9 +1,12 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
-import { ChatMessageRequest, ChatMessageResponse } from '../types/api';
+import { ChatMessageRequest, ChatMessageResponse, HealthResponse } from '../types/api';
+import { AuthResponse, RegisterPayload } from '../types/auth';
+import { HamiltonResult } from '../types/chat';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-const API_TIMEOUT = parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '30000', 10);
+const API_TIMEOUT = parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '120000', 10);
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -13,7 +16,7 @@ const client = axios.create({
   },
 });
 
-// Interceptor to attach JWT token
+// Interceptor to attach the Supabase access token issued by the backend
 client.interceptors.request.use(async (config) => {
   const token = await storage.getToken();
   if (token) {
@@ -22,145 +25,128 @@ client.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Mock simulation engine for robust offline/local testing when backend is not running
-let mockStepIndex = 0;
-const hamiltonQuestions = [
-  'Hola, soy Hamilton, tu acompañante de bienestar mental. Estoy aquí para escucharte sin juzgarte. Para empezar, ¿cómo te has sentido de ánimo en los últimos días?',
-  'Entiendo. ¿Has notado sensaciones de tristeza, desánimo o ganas de llorar con más frecuencia de lo normal?',
-  'Comprendo lo que compartes. Respecto al sentimiento de culpa, ¿sientes que te recriminas cosas o te culpas en exceso por situaciones cotidianas?',
-  'Gracias por contarme eso. Hablemos sobre el descanso: ¿has tenido dificultades para conciliar el sueño al irte a la cama?',
-  '¿Y qué tal durante la noche? ¿Sueles despertarte a mitad de la noche y te cuesta volver a dormir?',
-  '¿Te ocurre que despiertas muy temprano en la mañana y ya no puedes conciliar el sueño?',
-  'Entendido. Respecto a tus estudios o actividades diarias, ¿has sentido pérdida de interés o dificultad para concentrarte?',
-  '¿Has notado alguna lentitud al pensar, hablar o realizar tus actividades habituales?',
-  '¿Sientes agitación, inquietud física o dificultad para quedarte quieto/a?',
-  '¿Has experimentado ansiedad o preocupación constante por cosas del día a día?',
-  '¿Has sentido síntomas físicos como tensión muscular, dolores de cabeza, palpitaciones o sequedad en la boca?',
-  '¿Has notado cambios en tu apetito o digestión en estas semanas?',
-  '¿Has sentido fatiga generalizada, pesadez en el cuerpo o pérdida de energía?',
-  '¿Has notado cambios en tu deseo sexual o interés en tus relaciones personales?',
-  '¿Te preocupa excesivamente la posibilidad de padecer alguna enfermedad física?',
-  '¿Has notado alguna pérdida de peso sin haber estado a dieta?',
-  'Por último, ¿consideras que lo que estás sintiendo afecta significativamente tu capacidad para reconocer lo que te pasa y buscar ayuda?',
-];
+/**
+ * Se invoca cuando el backend responde 401 (token vencido o revocado en
+ * Supabase). `AuthProvider` lo usa para cerrar la sesión local.
+ */
+let onUnauthorized: (() => void) | null = null;
+
+export const setUnauthorizedHandler = (handler: (() => void) | null) => {
+  onUnauthorized = handler;
+};
+
+/**
+ * Convierte cualquier fallo de axios en un Error con mensaje mostrable.
+ * FastAPI manda el motivo en `detail`; si no hubo respuesta, es problema de red.
+ */
+const normalizarError = (error: unknown, fallback: string): Error => {
+  const axiosError = error as AxiosError<{ detail?: string | { msg?: string }[] }>;
+
+  if (axiosError?.response) {
+    if (axiosError.response.status === 401 && onUnauthorized) {
+      onUnauthorized();
+    }
+
+    const detail = axiosError.response.data?.detail;
+    if (typeof detail === 'string' && detail) {
+      return new Error(detail);
+    }
+    // Errores de validación de FastAPI: [{loc, msg, type}, ...]
+    if (Array.isArray(detail) && detail[0]?.msg) {
+      return new Error(detail[0].msg);
+    }
+    return new Error(fallback);
+  }
+
+  if (axiosError?.request) {
+    const esTimeout = axiosError.code === 'ECONNABORTED';
+    return new Error(
+      esTimeout
+        ? `El servidor no respondió a tiempo (${API_BASE_URL}). Intenta de nuevo.`
+        : `No se pudo conectar con el servidor (${API_BASE_URL}). ` +
+            'Verifica que el backend esté corriendo y que la URL sea alcanzable desde este dispositivo.'
+    );
+  }
+
+  return new Error(fallback);
+};
 
 export const api = {
-  // Auth Services
-  async login(email: string, password: string) {
+  // --- Auth (Supabase Auth vía backend) ---
+  async login(email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await client.post('/auth/login', { email, password });
+      const response = await client.post<AuthResponse>('/auth/login', { email, password });
       return response.data;
-    } catch (err) {
-      console.log('Backend login endpoint unavailable, using mock login fallback');
-      // Fallback mock response for testing UX seamlessly
-      if (email.toLowerCase().includes('error')) {
-        throw new Error('Credenciales inválidas');
-      }
-      return {
-        token: 'mock-jwt-token-' + Date.now(),
-        user: {
-          id: 'usr-123',
-          nombre: email.split('@')[0] || 'Usuario',
-          email: email,
-        },
-      };
+    } catch (error) {
+      throw normalizarError(error, 'No se pudo iniciar sesión. Inténtalo de nuevo.');
     }
   },
 
-  async register(data: any) {
+  async register(data: RegisterPayload): Promise<AuthResponse> {
     try {
-      const response = await client.post('/auth/register', data);
+      const response = await client.post<AuthResponse>('/auth/register', data);
       return response.data;
-    } catch (err) {
-      console.log('Backend register endpoint unavailable, using mock register fallback');
-      return {
-        token: 'mock-jwt-token-' + Date.now(),
-        user: {
-          id: 'usr-' + Math.random().toString(36).substring(7),
-          nombre: data.nombre,
-          email: data.email,
-        },
-      };
+    } catch (error) {
+      throw normalizarError(error, 'No se pudo completar el registro. Inténtalo de nuevo.');
     }
   },
 
-  // Chat Service
+  // --- Chat ---
   async sendMessage(payload: ChatMessageRequest): Promise<ChatMessageResponse> {
     try {
       const response = await client.post<ChatMessageResponse>('/chat/mensaje', payload);
       return response.data;
-    } catch (err) {
-      console.log(
-        'Backend /chat/mensaje unavailable, running intelligent local conversational engine'
-      );
-
-      const userText = payload.mensaje.toLowerCase();
-      const sesion_id = payload.sesion_id || 'ses-' + Date.now();
-
-      // Crisis check simulation
-      const crisisKeywords = [
-        'suicid',
-        'matar',
-        'sin sentido',
-        'no quiero vivir',
-        'morir',
-        'terminar con todo',
-        'ayuda urgente',
-        'crisis',
-      ];
-      const isCrisis = crisisKeywords.some((k) => userText.includes(k));
-
-      if (isCrisis) {
-        return {
-          sesion_id,
-          respuesta:
-            'Te escucho y me preocupo sinceramente por ti. Por favor recuerda que no estás solo/a. Queremos asegurarnos de que recibas el apoyo adecuado de inmediato.',
-          test_completo: false,
-          protocolo_crisis_activo: true,
-        };
-      }
-
-      // Progress through question sequence
-      const nextQuestion = hamiltonQuestions[mockStepIndex % hamiltonQuestions.length];
-      mockStepIndex++;
-
-      const test_completo = mockStepIndex >= hamiltonQuestions.length;
-
-      let resultado;
-      if (test_completo) {
-        resultado = {
-          score: 18,
-          nivel: 'Depresión moderada' as const,
-          interpretacion:
-            'Según la Escala de Evaluación de Depresión de Hamilton (HDRS-17), tu puntaje indica una presencia moderada de síntomas afectivos y ansiedad.',
-          recomendaciones: [
-            'Conversa con un profesional de salud mental en tu centro de salud más cercano.',
-            'Mantén rutinas regulares de sueño y actividad física moderada.',
-            'Considera agendar una cita en un Centro de Salud Mental Comunitario cercano.',
-          ],
-          fecha: new Date().toISOString(),
-          sesion_id,
-        };
-      }
-
-      return {
-        sesion_id,
-        respuesta: test_completo
-          ? 'Hemos finalizado nuestra evaluación. He organizado tus respuestas para ofrecerte un resumen detallado de tu bienestar. ¿Te gustaría revisarlo juntos?'
-          : nextQuestion,
-        test_completo,
-        protocolo_crisis_activo: false,
-        resultado,
-      };
+    } catch (error) {
+      throw normalizarError(error, 'No se pudo enviar tu mensaje. Inténtalo de nuevo.');
     }
   },
 
-  async health() {
+  // --- Histórico ---
+  async getEvaluaciones(limite = 50): Promise<HamiltonResult[]> {
     try {
-      const res = await client.get('/salud');
-      return res.data;
-    } catch (e) {
-      return { status: 'offline', app: 'Asistente Hamilton', timestamp: new Date().toISOString() };
+      const response = await client.get<HamiltonResult[]>('/evaluaciones', {
+        params: { limite },
+      });
+      return response.data;
+    } catch (error) {
+      throw normalizarError(error, 'No se pudo cargar tu histórico.');
     }
+  },
+
+  // --- Voz ---
+  /**
+   * Sube el audio grabado y devuelve la transcripción.
+   * En nativo FormData acepta `{uri, name, type}`; en web hay que convertir el
+   * blob URI a Blob antes de adjuntarlo.
+   */
+  async transcribirAudio(uri: string): Promise<string> {
+    const form = new FormData();
+
+    if (Platform.OS === 'web') {
+      const blob = await (await fetch(uri)).blob();
+      form.append('audio', blob, 'audio.webm');
+    } else {
+      form.append('audio', {
+        uri,
+        name: 'audio.m4a',
+        type: 'audio/m4a',
+      } as unknown as Blob);
+    }
+
+    try {
+      // Sin Content-Type explícito: axios calcula el boundary del multipart.
+      const response = await client.post<{ texto: string }>('/voz/transcribir', form, {
+        headers: { 'Content-Type': undefined as unknown as string },
+        timeout: 120000,
+      });
+      return response.data.texto;
+    } catch (error) {
+      throw normalizarError(error, 'No se pudo transcribir el audio.');
+    }
+  },
+
+  async health(): Promise<HealthResponse> {
+    const response = await client.get<HealthResponse>('/salud');
+    return response.data;
   },
 };

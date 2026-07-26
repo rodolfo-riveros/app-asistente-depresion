@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, View, Image } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { colors } from '../constants/colors';
+import { glassGlow } from '../constants/glass';
+
+const avatarImage = require('../../assets/avatar.png');
 
 type Emotion = 'listening' | 'empathetic' | 'concerned' | 'inspiring' | 'neutral';
 
@@ -11,12 +13,12 @@ interface AvatarAssistantProps {
   emotion?: Emotion;
 }
 
-const icons: Record<Emotion, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  listening: { name: 'ear-outline', color: colors.accent },
-  empathetic: { name: 'heart-outline', color: colors.danger },
-  concerned: { name: 'alert-circle-outline', color: colors.warning },
-  inspiring: { name: 'sparkles-outline', color: colors.primary },
-  neutral: { name: 'sparkles-outline', color: colors.primary },
+const emotionBorders: Record<Emotion, string> = {
+  listening: colors.accent,
+  empathetic: colors.secondary,
+  concerned: colors.warning,
+  inspiring: colors.primary,
+  neutral: colors.primary,
 };
 
 export const AvatarAssistant: React.FC<AvatarAssistantProps> = ({
@@ -24,21 +26,33 @@ export const AvatarAssistant: React.FC<AvatarAssistantProps> = ({
   emotion = 'neutral',
 }) => {
   const dims = size === 'lg' ? 64 : size === 'md' ? 44 : 32;
-  const iconSize = size === 'lg' ? 28 : size === 'md' ? 20 : 16;
-  const icon = icons[emotion];
+  const borderColor = emotionBorders[emotion];
 
   return (
     <Animated.View entering={FadeIn.duration(400)}>
       <View
         style={[
           styles.avatar,
+          glassGlow(borderColor, size === 'lg' ? 20 : 10),
           {
             width: dims,
             height: dims,
             borderRadius: dims / 2,
+            borderColor,
           },
         ]}>
-        <Ionicons name={icon.name as any} size={iconSize} color={icon.color} />
+        <Image
+          source={avatarImage}
+          style={[
+            styles.image,
+            {
+              width: dims,
+              height: dims,
+              borderRadius: dims / 2,
+              top: -4,
+            },
+          ]}
+        />
       </View>
     </Animated.View>
   );
@@ -46,15 +60,13 @@ export const AvatarAssistant: React.FC<AvatarAssistantProps> = ({
 
 const styles = StyleSheet.create({
   avatar: {
-    backgroundColor: colors.primaryContainer,
-    borderColor: colors.glassBorderActive,
-    borderWidth: 1.5,
+    backgroundColor: colors.glassBgLight,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 2,
+    overflow: 'hidden',
+  },
+  image: {
+    resizeMode: 'cover',
   },
 });

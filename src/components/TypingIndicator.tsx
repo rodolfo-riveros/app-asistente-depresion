@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Animated } from 'react-native';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
 import { AvatarAssistant } from './AvatarAssistant';
+import { Glass } from './Glass';
 
 export const TypingIndicator: React.FC = () => {
   const [dot1] = useState(() => new Animated.Value(0.3));
@@ -46,14 +47,19 @@ export const TypingIndicator: React.FC = () => {
   return (
     <View style={styles.container}>
       <AvatarAssistant size="sm" emotion="listening" />
-      <View style={styles.bubble}>
+      <Glass
+        level="base"
+        style={styles.bubble}
+        radius={spacing.borderRadiusLg}
+        radiusStyle={styles.bubbleRadius}
+        contentStyle={styles.bubbleContent}>
         <Text style={styles.typingText}>Hamilton está respondiendo</Text>
         <View style={styles.dotsRow}>
           <Animated.View style={[styles.dot, { opacity: dot1 }]} />
           <Animated.View style={[styles.dot, { opacity: dot2 }]} />
           <Animated.View style={[styles.dot, { opacity: dot3 }]} />
         </View>
-      </View>
+      </Glass>
     </View>
   );
 };
@@ -66,15 +72,19 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   bubble: {
+    marginLeft: spacing.sm,
+  },
+  bubbleRadius: {
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: spacing.borderRadiusLg,
+    borderBottomLeftRadius: spacing.borderRadiusLg,
+    borderBottomRightRadius: spacing.borderRadiusLg,
+  },
+  bubbleContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.assistantBg,
-    borderColor: colors.assistantBorder,
-    borderWidth: 1,
-    borderRadius: spacing.borderRadiusMd,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
-    marginLeft: spacing.sm,
   },
   typingText: {
     color: colors.textSecondary,

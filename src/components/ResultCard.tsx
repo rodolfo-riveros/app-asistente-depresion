@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { HamiltonResult } from '../types/chat';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
+import { glassGlow } from '../constants/glass';
 import { formatters } from '../utils/formatters';
 import { GlassCard } from './GlassCard';
 
@@ -20,14 +21,14 @@ export const ResultCard: React.FC<ResultCardProps> = ({ resultado }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Resultado de la Evaluación</Text>
         <View
-          style={[styles.badge, { backgroundColor: `${badgeColor}18`, borderColor: badgeColor }]}>
+          style={[styles.badge, { backgroundColor: `${badgeColor}22`, borderColor: badgeColor }]}>
           <Text style={[styles.badgeText, { color: badgeColor }]}>{resultado.nivel}</Text>
         </View>
       </View>
 
       {/* Score Circle */}
       <View style={styles.scoreContainer}>
-        <View style={[styles.scoreBadge, { borderColor: badgeColor }]}>
+        <View style={[styles.scoreBadge, { borderColor: badgeColor }, glassGlow(badgeColor, 18)]}>
           <Text style={styles.scoreNumber}>{resultado.score}</Text>
           <Text style={styles.scoreMax}>/ 52</Text>
         </View>
@@ -46,7 +47,12 @@ export const ResultCard: React.FC<ResultCardProps> = ({ resultado }) => {
           <Text style={styles.sectionTitle}>Recomendaciones Sugeridas</Text>
           {resultado.recomendaciones.map((rec, i) => (
             <View key={i} style={styles.recRow}>
-              <Ionicons name="sparkles" size={12} color={colors.primary} style={styles.bullet} />
+              <Ionicons
+                name="chevron-forward"
+                size={12}
+                color={colors.primary}
+                style={styles.bullet}
+              />
               <Text style={styles.recText}>{rec}</Text>
             </View>
           ))}
@@ -85,6 +91,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    flexShrink: 1,
+    marginRight: spacing.sm,
   },
   badge: {
     paddingHorizontal: 12,
@@ -104,8 +112,8 @@ const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
-    backgroundColor: 'rgba(241, 245, 249, 0.92)',
-    borderWidth: 3,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xs,
@@ -147,7 +155,7 @@ const styles = StyleSheet.create({
   },
   bullet: {
     marginRight: 8,
-    marginTop: 2,
+    marginTop: 3,
   },
   recText: {
     fontSize: 13,
@@ -157,9 +165,11 @@ const styles = StyleSheet.create({
   },
   disclaimerBox: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(37, 99, 235, 0.06)',
+    backgroundColor: colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
     padding: spacing.md,
-    borderRadius: spacing.borderRadiusSm,
+    borderRadius: spacing.borderRadiusMd,
     marginTop: spacing.lg,
     alignItems: 'flex-start',
   },
@@ -169,7 +179,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     lineHeight: 17,
     flexShrink: 1,
   },

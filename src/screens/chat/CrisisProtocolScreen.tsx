@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import { SpatialContainer } from '../../components/SpatialContainer';
 import { GlassCard } from '../../components/GlassCard';
@@ -10,7 +11,7 @@ import { CUSCO_HEALTH_CENTERS, locationService } from '../../services/location';
 import { MentalHealthCenter } from '../../types/chat';
 
 export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [centers, setCenters] = useState<MentalHealthCenter[]>(CUSCO_HEALTH_CENTERS);
+  const [centers] = useState<MentalHealthCenter[]>(CUSCO_HEALTH_CENTERS);
   const [loadingLoc, setLoadingLoc] = useState(false);
 
   const handleCall = (number: string) => {
@@ -50,8 +51,10 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Ionicons name="heart" size={14} color={colors.danger} />
-          <Text style={styles.badgeText}> Protocolo de Acompañamiento Prioritario</Text>
+          <View style={styles.badge}>
+            <Ionicons name="shield-checkmark" size={13} color={colors.danger} />
+            <Text style={styles.badgeText}> Protocolo de Acompañamiento Prioritario</Text>
+          </View>
           <Text style={styles.title}>Queremos Ayudarte</Text>
           <Text style={styles.subtitle}>
             Tu vida y tu bienestar son invaluables. Si estás pasando por un momento muy difícil o
@@ -62,7 +65,7 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
         {/* Guaranteed Line 113 */}
         <GlassCard style={styles.hotlineCard} glowColor={colors.dangerBorder}>
           <View style={styles.hotlineHeader}>
-            <Ionicons name="call-outline" size={24} color={colors.accent} />
+            <Ionicons name="call-outline" size={24} color={colors.danger} />
             <View style={styles.hotlineTitles}>
               <Text style={styles.hotlineName}>Línea 113 (Opción 5)</Text>
               <Text style={styles.hotlineSub}>MINSA Perú • Orientación Psicológica 24/7</Text>
@@ -74,16 +77,24 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
           </Text>
           <View style={styles.btnRow}>
             <Pressable
-              style={({ pressed }) => [styles.copyBtn, pressed && { opacity: 0.8 }]}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.copyBtn, pressed && styles.pressed]}
               onPress={() => handleCopy('113')}>
               <Ionicons name="copy-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.copyBtnText}> Copiar 113</Text>
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.85 }]}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.fillBtn, pressed && styles.pressed]}
               onPress={() => handleCall('113')}>
-              <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
-              <Text style={styles.callBtnText}> Llamar Gratis al 113</Text>
+              <LinearGradient
+                colors={colors.dangerGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.fillBtnInner}>
+                <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
+                <Text style={styles.fillBtnText}> Llamar Gratis al 113</Text>
+              </LinearGradient>
             </Pressable>
           </View>
         </GlassCard>
@@ -103,10 +114,17 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
           </Text>
           <View style={styles.btnRow}>
             <Pressable
-              style={({ pressed }) => [styles.callBtnWarning, pressed && { opacity: 0.85 }]}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.fillBtn, pressed && styles.pressed]}
               onPress={() => handleCall('106')}>
-              <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
-              <Text style={styles.callBtnWarningText}> Llamar 106</Text>
+              <LinearGradient
+                colors={colors.warningGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.fillBtnInner}>
+                <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
+                <Text style={styles.fillBtnText}> Llamar 106</Text>
+              </LinearGradient>
             </Pressable>
           </View>
         </GlassCard>
@@ -115,10 +133,11 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Centros de Salud Mental en Cusco</Text>
           <Pressable
-            style={({ pressed }) => [styles.gpsBtn, pressed && { opacity: 0.8 }]}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.gpsBtn, pressed && styles.pressed]}
             onPress={handleRequestLocation}
             disabled={loadingLoc}>
-            {!loadingLoc && <Ionicons name="location-outline" size={14} color={colors.primary} />}
+            {!loadingLoc && <Ionicons name="navigate-outline" size={14} color={colors.primary} />}
             <Text style={styles.gpsBtnText}>{loadingLoc ? 'Buscando...' : ' Usar GPS'}</Text>
           </Pressable>
         </View>
@@ -127,7 +146,7 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
           <GlassCard key={c.id} style={styles.centerCard}>
             <Text style={styles.centerTitle}>{c.nombre}</Text>
             <View style={styles.centerRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+              <Ionicons name="navigate-outline" size={14} color={colors.textMuted} />
               <Text style={styles.centerAddress}> {c.direccion}</Text>
             </View>
             <View style={styles.centerRow}>
@@ -137,13 +156,15 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
 
             <View style={styles.centerBtnRow}>
               <Pressable
-                style={({ pressed }) => [styles.centerCallBtn, pressed && { opacity: 0.85 }]}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.centerCallBtn, pressed && styles.pressed]}
                 onPress={() => handleCall(c.telefono)}>
                 <Ionicons name="call-outline" size={14} color={colors.accent} />
                 <Text style={styles.centerCallBtnText}> {c.telefono}</Text>
               </Pressable>
               <Pressable
-                style={({ pressed }) => [styles.centerMapBtn, pressed && { opacity: 0.85 }]}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.centerMapBtn, pressed && styles.pressed]}
                 onPress={() => handleOpenMap(c)}>
                 <Ionicons name="map-outline" size={14} color={colors.primary} />
                 <Text style={styles.centerMapBtnText}> Cómo Llegar</Text>
@@ -154,7 +175,8 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
 
         {/* Return to Chat */}
         <Pressable
-          style={({ pressed }) => [styles.returnBtn, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.returnBtn, pressed && styles.pressed]}
           onPress={() => navigation.goBack()}>
           <Text style={styles.returnBtnText}>Volver al chat</Text>
         </Pressable>
@@ -166,22 +188,28 @@ export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation
 const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.screenPadding,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 100,
   },
   header: {
     alignItems: 'center',
     marginBottom: spacing.lg,
     marginTop: spacing.md,
   },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.dangerBg,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginBottom: spacing.sm,
+  },
   badgeText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontWeight: 'bold',
     fontSize: 12,
-    backgroundColor: 'rgba(254, 226, 226, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: spacing.xs,
   },
   title: {
     fontSize: 26,
@@ -203,9 +231,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  hotlineIcon: {
-    marginRight: spacing.sm,
-  },
   centerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -213,6 +238,7 @@ const styles = StyleSheet.create({
   },
   hotlineTitles: {
     flex: 1,
+    marginLeft: spacing.sm,
   },
   hotlineName: {
     fontSize: 18,
@@ -238,10 +264,12 @@ const styles = StyleSheet.create({
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(241, 245, 249, 0.9)',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: spacing.borderRadiusSm,
+    borderRadius: spacing.borderRadiusMd,
     marginRight: 8,
   },
   copyBtnText: {
@@ -249,24 +277,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
-  callBtn: {
+  fillBtn: {
+    borderRadius: spacing.borderRadiusMd,
+    overflow: 'hidden',
+  },
+  fillBtnInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.accent,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: spacing.borderRadiusSm,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderRadius: spacing.borderRadiusMd,
   },
-  callBtnWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.warning,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: spacing.borderRadiusSm,
-  },
-  callBtnText: {
-    color: colors.white,
+  fillBtnText: {
+    color: colors.onPrimary,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -281,13 +306,17 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    flexShrink: 1,
+    marginRight: spacing.sm,
   },
   gpsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    backgroundColor: colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: colors.glassBorderActive,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   gpsBtnText: {
@@ -301,7 +330,7 @@ const styles = StyleSheet.create({
   centerTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   centerAddress: {
@@ -322,12 +351,12 @@ const styles = StyleSheet.create({
   centerCallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: colors.accentLight,
     borderColor: colors.accent,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 9,
+    borderRadius: spacing.borderRadiusMd,
     flex: 1,
     marginRight: 6,
     justifyContent: 'center',
@@ -340,12 +369,12 @@ const styles = StyleSheet.create({
   centerMapBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    backgroundColor: colors.primaryContainer,
     borderColor: colors.primary,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 9,
+    borderRadius: spacing.borderRadiusMd,
     flex: 1,
     marginLeft: 6,
     justifyContent: 'center',
@@ -356,22 +385,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   returnBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderColor: colors.glassBorder,
+    backgroundColor: colors.surface,
+    borderColor: colors.borderDark,
     borderWidth: 1,
     paddingVertical: 14,
-    borderRadius: spacing.borderRadiusSm,
+    borderRadius: spacing.borderRadiusLg,
     alignItems: 'center',
     marginTop: spacing.xl,
-  },
-  callBtnWarningText: {
-    color: colors.onPrimary,
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   returnBtnText: {
     color: colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

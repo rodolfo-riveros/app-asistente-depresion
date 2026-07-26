@@ -6,20 +6,24 @@ export const spacing = {
   xl: 32,
   xxl: 48,
 
-  // Spatial Luminance Layout & Gutter Grid
+  screenPaddingMobile: 20,
+  screenPaddingDesktop: 40,
   screenPadding: 20,
   cardPadding: 24,
   inputPaddingVertical: 14,
   inputPaddingHorizontal: 16,
+  gutter: 16,
 
-  // Spatial Luminance Rounded Vessel Scale
-  borderRadiusSm: 4,
-  borderRadiusDefault: 8,
-  borderRadiusMd: 12,
-  borderRadiusLg: 16,
-  borderRadiusXl: 24,
+  stackGapSm: 8,
+  stackGapMd: 16,
+  stackGapLg: 32,
+
+  borderRadiusSm: 8,
+  borderRadiusDefault: 16,
+  borderRadiusMd: 24,
+  borderRadiusLg: 32,
+  borderRadiusXl: 48,
   borderRadiusFull: 9999,
 
-  // Elevation / Spatial Glow
   spatialGlowRadius: 24,
 };

@@ -11,9 +11,12 @@ interface ChatContextType {
   loading: boolean;
   currentEmotion: AssistantEmotion;
   resultado: HamiltonResult | null;
+  /** El backend pidió la ubicación del usuario (tool `solicitar_ubicacion`). */
+  ubicacionSolicitada: boolean;
   sendMessage: (texto: string, lat?: number, lon?: number) => Promise<void>;
   resetChat: () => void;
   closeCrisisModal: () => void;
+  clearUbicacionSolicitada: () => void;
 }
 
 export const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -35,6 +38,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState<boolean>(false);
   const [currentEmotion, setCurrentEmotion] = useState<AssistantEmotion>('listening');
   const [resultado, setResultado] = useState<HamiltonResult | null>(null);
+  const [ubicacionSolicitada, setUbicacionSolicitada] = useState<boolean>(false);
 
   const sendMessage = async (texto: string, lat?: number, lon?: number) => {
     if (!texto.trim()) return;
@@ -82,20 +86,25 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setProtocoloCrisisActivo(true);
       }
 
+      if (response.ubicacion_solicitada) {
+        setUbicacionSolicitada(true);
+      }
+
       if (isComplete) {
         setTestCompleto(true);
         if (evalResult) {
           setResultado(evalResult);
+          // Caché local: permite ver el histórico sin red.
           await storage.saveEvaluation(evalResult);
         }
       }
     } catch (e) {
       console.error('Error in sendMessage:', e);
+      const detalle = e instanceof Error ? e.message : 'No pude procesar tu mensaje.';
       const errorMsg: ChatMessage = {
         id: 'msg-err-' + Date.now(),
         role: 'assistant',
-        content:
-          'Lo siento, tuve un pequeño problema de conexión starlight. ¿Podrías intentar enviarme tu mensaje nuevamente?',
+        content: `${detalle}\n\n¿Quieres intentar enviarlo de nuevo?`,
         timestamp: new Date().toISOString(),
         emotion: 'concerned',
       };
@@ -117,11 +126,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTestCompleto(false);
     setProtocoloCrisisActivo(false);
     setResultado(null);
+    setUbicacionSolicitada(false);
     setCurrentEmotion('listening');
   };
 
   const closeCrisisModal = () => {
     setProtocoloCrisisActivo(false);
+  };
+
+  const clearUbicacionSolicitada = () => {
+    setUbicacionSolicitada(false);
   };
 
   return (
@@ -134,9 +148,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loading,
         currentEmotion,
         resultado,
+        ubicacionSolicitada,
         sendMessage,
         resetChat,
         closeCrisisModal,
+        clearUbicacionSolicitada,
       }}>
       {children}
     </ChatContext.Provider>

@@ -1,16 +1,16 @@
-# Asistente Hamilton — React Native Expo App (Spatial UI Edition)
+# Asistente Hamilton — React Native Expo App (Glassmorphism Edition)
 
-Aplicación móvil en **React Native + Expo** con diseño **Spatial UI / Cosmic Aesthetic** para conversaciones de acompañamiento emocional usando la Escala de Depresión de Hamilton (17 ítems).
+Aplicación móvil en **React Native + Expo** con diseño **glassmorphism** y paleta *Verde agua / teal claro* para conversaciones de acompañamiento emocional usando la Escala de Depresión de Hamilton (17 ítems).
 
 ---
 
 ## 🌟 Características Principales
 
-1. **Diseño Spatial UI & Estética Cósmica**:
-   - Fondo gradiente de espacio profundo con orbes de luz ambiental.
-   - Tarjetas *Glassmorphic* translúcidas con bordes resplandecientes.
-   - Avatar orbital con medallas de expresión emocional.
-   - Indicador de escritura animado con pulso de luz.
+1. **Diseño Glassmorphism (paleta "Verde agua / teal claro")**:
+   - Lienzo verde agua claro (`#EDF4F3`) con degradados de luz difusa, sin orbes ni formas decorativas.
+   - Superficies de cristal reales (blur + tinte blanco + borde luminoso + hairline) vía el componente `Glass`.
+   - Acento teal profundo (`#35786F`) y apoyo azul acero (`#46728A`); severidad teal → azul → ámbar → rojo.
+   - Texto con contraste AA (≥ 4.5:1) sobre el fondo en todos los niveles.
 
 2. **Autenticación Segura**:
    - Registro e inicio de sesión con nombre completo, correo electrónico y contraseña.
@@ -54,15 +54,27 @@ Escanea el código QR con la app **Expo Go** en tu celular o presiona `a` para e
 
 ## 🌐 Conexión con Backend FastAPI
 
-La aplicación consume el backend FastAPI configurado en `.env`:
+La aplicación consume el backend FastAPI (`asistente-hamilton-backend`), que a su
+vez persiste todo en **Supabase**. URL configurable en `.env`:
+
 ```env
-EXPO_PUBLIC_API_BASE_URL=http://localhost:8000
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8000   # 10.0.2.2 en emulador Android; IP LAN en dispositivo físico
 ```
 
-- Endpoint principal: `POST /chat/mensaje`
-- Endpoints de autenticación: `POST /auth/login`, `POST /auth/register`
+| Endpoint | Uso |
+| --- | --- |
+| `POST /auth/register`, `POST /auth/login` | Cuentas (Supabase Auth vía backend). Devuelven `{token, user}` |
+| `POST /chat/mensaje` | Conversación; trae `resultado` cuando el test termina |
+| `GET /evaluaciones` | Histórico del usuario autenticado |
+| `GET /salud` | Health check |
 
-> **Nota**: La app incluye un motor de *Mock Fallback local inteligente* de modo que si el servidor FastAPI no está corriendo, la app sigue funcionando al 100% permitiéndote probar la conversación completa, activar el protocolo de crisis y generar el informe sin ningún error.
+El `token` viaja en `Authorization: Bearer` en todas las llamadas. Un `401`
+cierra la sesión local automáticamente.
+
+> **Requiere el backend corriendo.** Ya no hay motor mock local: si el servidor
+> no responde, la app muestra el error real (por ejemplo, "No se pudo conectar
+> con el servidor") en vez de simular la conversación. El único dato que
+> sobrevive sin conexión es la caché local del histórico.
 
 ---
 
