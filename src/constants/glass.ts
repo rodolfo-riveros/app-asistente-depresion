@@ -47,7 +47,7 @@ export const glassShadow: Record<GlassLevel, ViewStyle> = {
   high: {
     shadowColor: colors.glassShadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 2,
   },

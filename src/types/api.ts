@@ -18,6 +18,8 @@ export interface ChatMessageResponse {
   resultado?: HamiltonResult;
 }
 
-export interface HealthResponse {
-  status: string;
+export interface MensajeGuardado {
+  rol: 'user' | 'assistant';
+  contenido: string;
+  creado_en: string;
 }

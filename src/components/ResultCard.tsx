@@ -16,7 +16,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ resultado }) => {
   const badgeColor = formatters.getSeverityColor(resultado.nivel);
 
   return (
-    <GlassCard style={styles.card} glowColor={badgeColor}>
+    <GlassCard level="low" style={styles.card} glowColor={badgeColor}>
       {/* Level Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Resultado de la Evaluación</Text>

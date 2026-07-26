@@ -6,6 +6,9 @@
     "production": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EAS_BUILD_NPM_CI": "0"
       }
     }
   },

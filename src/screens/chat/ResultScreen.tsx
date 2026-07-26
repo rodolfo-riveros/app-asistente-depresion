@@ -4,10 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { SpatialContainer } from '../../components/SpatialContainer';
 import { ResultCard } from '../../components/ResultCard';
 import { AuthButton } from '../../components/AuthButton';
+import { Glass } from '../../components/Glass';
 import { colors } from '../../constants/colors';
+import { asistente } from '../../constants/asistente';
 import { spacing } from '../../constants/spacing';
 import { useChat } from '../../hooks/useChat';
 import { storage } from '../../utils/storage';
+
+const pressableBase = { flex: 1 };
 
 export const ResultScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const { resetChat } = useChat();
@@ -24,10 +28,10 @@ export const ResultScreen: React.FC<{ navigation: any; route: any }> = ({ naviga
 
   const handleShare = async () => {
     try {
-      const shareMessage = `Resumen de Evaluación - Asistente Hamilton:\nNivel: ${resultado.nivel}\nPuntaje: ${resultado.score}/52\nFecha: ${new Date(resultado.fecha).toLocaleDateString()}\n\nInterpretación: ${resultado.interpretacion}`;
+      const shareMessage = `Resumen de mi evaluación (${asistente.nombre}):\nNivel: ${resultado.nivel}\nPuntaje: ${resultado.score}/52\nFecha: ${new Date(resultado.fecha).toLocaleDateString()}\n\nInterpretación: ${resultado.interpretacion}`;
       await Share.share({
         message: shareMessage,
-        title: 'Resultado de Evaluación Hamilton',
+        title: 'Resumen de mi evaluación',
       });
     } catch (e) {
       console.error('Error sharing result:', e);
@@ -56,7 +60,7 @@ export const ResultScreen: React.FC<{ navigation: any; route: any }> = ({ naviga
 
           <Text style={styles.title}>Resumen de tu Conversación</Text>
           <Text style={styles.subtitle}>
-            Gracias por compartir lo que sientes con Amiga Hamilton. Aquí hay un resumen de lo
+            Gracias por compartir lo que sientes con {asistente.nombre}. Aquí hay un resumen de lo
             conversado.
           </Text>
         </View>
@@ -71,18 +75,22 @@ export const ResultScreen: React.FC<{ navigation: any; route: any }> = ({ naviga
           <View style={styles.secondaryRow}>
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.btnSecondary, pressed && styles.pressed]}
+              style={({ pressed }) => [pressableBase, pressed && { opacity: 0.85 }]}
               onPress={handleShare}>
-              <Ionicons name="share-outline" size={16} color={colors.textPrimary} />
-              <Text style={styles.btnSecondaryText}> Compartir</Text>
+              <Glass level="low" contentStyle={styles.btnSecondaryContent}>
+                <Ionicons name="share-outline" size={16} color={colors.textPrimary} />
+                <Text style={styles.btnSecondaryText}> Compartir</Text>
+              </Glass>
             </Pressable>
 
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.btnSecondary, pressed && styles.pressed]}
+              style={({ pressed }) => [pressableBase, pressed && { opacity: 0.85 }]}
               onPress={handleSave}>
-              <Ionicons name="download-outline" size={16} color={colors.textPrimary} />
-              <Text style={styles.btnSecondaryText}> Guardar</Text>
+              <Glass level="low" contentStyle={styles.btnSecondaryContent}>
+                <Ionicons name="download-outline" size={16} color={colors.textPrimary} />
+                <Text style={styles.btnSecondaryText}> Guardar</Text>
+              </Glass>
             </Pressable>
           </View>
         </View>
@@ -151,25 +159,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: spacing.md,
+    gap: spacing.sm,
   },
-  btnSecondary: {
+  btnSecondaryContent: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderColor: colors.borderDark,
-    borderWidth: 1,
     paddingVertical: 13,
-    borderRadius: spacing.borderRadiusLg,
-    marginHorizontal: 4,
+    gap: 6,
   },
   btnSecondaryText: {
     color: colors.textPrimary,
     fontWeight: '600',
     fontSize: 14,
-  },
-  pressed: {
-    opacity: 0.8,
   },
 });

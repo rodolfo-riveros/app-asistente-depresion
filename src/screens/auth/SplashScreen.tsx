@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { SpatialContainer } from '../../components/SpatialContainer';
 import { colors } from '../../constants/colors';
+import { asistente } from '../../constants/asistente';
 import { spacing } from '../../constants/spacing';
 import { AvatarAssistant } from '../../components/AvatarAssistant';
 
@@ -10,7 +11,7 @@ export const SplashScreen: React.FC = () => {
     <SpatialContainer style={styles.container}>
       <View style={styles.content}>
         <AvatarAssistant size="lg" emotion="inspiring" />
-        <Text style={styles.title}>Asistente Hamilton</Text>
+        <Text style={styles.title}>{asistente.nombre}</Text>
         <Text style={styles.subtitle}>
           Tu espacio confidencial de acompañamiento y bienestar emocional
         </Text>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, Animated } from 'react-native';
 import { colors } from '../constants/colors';
+import { asistente } from '../constants/asistente';
 import { spacing } from '../constants/spacing';
 import { AvatarAssistant } from './AvatarAssistant';
 import { Glass } from './Glass';
@@ -53,7 +54,7 @@ export const TypingIndicator: React.FC = () => {
         radius={spacing.borderRadiusLg}
         radiusStyle={styles.bubbleRadius}
         contentStyle={styles.bubbleContent}>
-        <Text style={styles.typingText}>Hamilton está respondiendo</Text>
+        <Text style={styles.typingText}>{asistente.nombre} está respondiendo</Text>
         <View style={styles.dotsRow}>
           <Animated.View style={[styles.dot, { opacity: dot1 }]} />
           <Animated.View style={[styles.dot, { opacity: dot2 }]} />

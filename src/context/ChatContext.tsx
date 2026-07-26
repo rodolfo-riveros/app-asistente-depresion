@@ -1,7 +1,10 @@
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { ChatMessage, HamiltonResult, AssistantEmotion } from '../types/chat';
 import { chatService } from '../services/chat';
+import { api } from '../services/api';
 import { storage } from '../utils/storage';
+import { asistente } from '../constants/asistente';
+import { useAuth } from '../hooks/useAuth';
 
 interface ChatContextType {
   messages: ChatMessage[];
@@ -13,6 +16,8 @@ interface ChatContextType {
   resultado: HamiltonResult | null;
   /** El backend pidió la ubicación del usuario (tool `solicitar_ubicacion`). */
   ubicacionSolicitada: boolean;
+  /** Se está recuperando la conversación anterior desde el servidor. */
+  restaurando: boolean;
   sendMessage: (texto: string, lat?: number, lon?: number) => Promise<void>;
   resetChat: () => void;
   closeCrisisModal: () => void;
@@ -24,13 +29,25 @@ export const ChatContext = createContext<ChatContextType | undefined>(undefined)
 const initialGreeting: ChatMessage = {
   id: 'msg-0',
   role: 'assistant',
-  content:
-    '¡Hola! Soy Hamilton, tu acompañante y guía de bienestar. Estoy aquí para escucharte sin presiones y realizar una evaluación juntos. ¿Cómo te sientes el día de hoy?',
+  content: asistente.saludo,
   timestamp: new Date().toISOString(),
   emotion: 'listening',
 };
 
+/** Convierte la transcripción guardada en el servidor a mensajes de la UI. */
+const aMensajesUI = (
+  guardados: { rol: string; contenido: string; creado_en: string }[]
+): ChatMessage[] =>
+  guardados.map((m, i) => ({
+    id: `msg-hist-${i}`,
+    role: m.rol === 'user' ? 'user' : 'assistant',
+    content: m.contenido,
+    timestamp: m.creado_en || new Date().toISOString(),
+    emotion: m.rol === 'user' ? undefined : 'empathetic',
+  }));
+
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([initialGreeting]);
   const [sesionId, setSesionId] = useState<string | null>(null);
   const [testCompleto, setTestCompleto] = useState<boolean>(false);
@@ -39,6 +56,43 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentEmotion, setCurrentEmotion] = useState<AssistantEmotion>('listening');
   const [resultado, setResultado] = useState<HamiltonResult | null>(null);
   const [ubicacionSolicitada, setUbicacionSolicitada] = useState<boolean>(false);
+  // Arranca en true: hasta que el servidor conteste no sabemos si hay una
+  // conversación previa, y así no parpadea el saludo inicial antes del historial.
+  const [restaurando, setRestaurando] = useState<boolean>(true);
+
+  /**
+   * Al iniciar sesión se recupera la última conversación del servidor para
+   * continuarla. Sin esto, cada arranque de la app empezaba de cero aunque el
+   * backend sí tuviera guardada la charla.
+   */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let activo = true;
+
+    const restaurar = async () => {
+      // `await` de entrada: ningún setState ocurre de forma síncrona aquí.
+      // El backend mantiene un hilo único por persona, así que esto trae toda
+      // la conversación, no una "sesión" concreta.
+      const historial = await api.getHistorial().catch((e) => {
+        console.warn('No se pudo restaurar la conversación:', e);
+        return [];
+      });
+
+      if (!activo) return;
+
+      if (historial.length > 0) {
+        setMessages(aMensajesUI(historial));
+      }
+      setRestaurando(false);
+    };
+
+    restaurar();
+
+    return () => {
+      activo = false;
+    };
+  }, [isAuthenticated]);
 
   const sendMessage = async (texto: string, lat?: number, lon?: number) => {
     if (!texto.trim()) return;
@@ -94,7 +148,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setTestCompleto(true);
         if (evalResult) {
           setResultado(evalResult);
-          // Caché local: permite ver el histórico sin red.
+          // Copia local de respaldo; el histórico que se muestra viene del backend.
           await storage.saveEvaluation(evalResult);
         }
       }
@@ -149,6 +203,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         currentEmotion,
         resultado,
         ubicacionSolicitada,
+        restaurando,
         sendMessage,
         resetChat,
         closeCrisisModal,

@@ -75,7 +75,6 @@ export const HologramAvatar: React.FC<HologramAvatarProps> = ({
   const isSmall = size === 'sm';
   const avatarSize = isSmall ? 40 : 76;
   const haloSize = avatarSize + (isSmall ? 16 : 44);
-  const iconSize = isSmall ? 18 : 32;
 
   return (
     <Pressable onPress={onPress} style={isSmall ? styles.wrapperSmall : styles.wrapper}>

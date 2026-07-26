@@ -24,6 +24,7 @@ import { CrisisAlert } from '../../components/CrisisAlert';
 import { LocationPermissionModal } from '../../components/LocationPermissionModal';
 import { Glass, GlassScrim } from '../../components/Glass';
 import { colors } from '../../constants/colors';
+import { asistente } from '../../constants/asistente';
 import { spacing } from '../../constants/spacing';
 import { glassGlow } from '../../constants/glass';
 import { useChat } from '../../hooks/useChat';
@@ -106,6 +107,8 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     if (!voiceLoopRef.current) return;
     setHablando(false);
     await dictado.cancelar();
+    // Preparar antes de capturar evita que se coman las primeras sílabas.
+    await dictado.preparar();
     await dictado.iniciar();
   }, [dictado]);
 
@@ -234,7 +237,7 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               onPress={() => setShowProfileModal(true)}
             />
             <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>Amiga Hamilton</Text>
+              <Text style={styles.heroName}>{asistente.nombre}</Text>
               <Text style={styles.heroStatus}>{loading ? 'escribiendo...' : 'en línea'}</Text>
             </View>
           </Glass>
@@ -274,7 +277,9 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               <TextInput
                 ref={inputRef}
                 style={styles.input}
-                placeholder={loading ? 'Hamilton está pensando...' : 'Cuéntame cómo te sientes...'}
+                placeholder={
+                  loading ? `${asistente.nombre} está pensando...` : 'Cuéntame cómo te sientes...'
+                }
                 placeholderTextColor={colors.textMuted}
                 value={inputMessage}
                 onChangeText={setInputMessage}
@@ -351,7 +356,7 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             disabled={dictado.transcribiendo || loading}
             style={styles.voiceTapArea}>
             <VoiceWave speaking={dictado.grabando || hablando} />
-            <Text style={styles.voiceTitle}>Amiga Hamilton</Text>
+            <Text style={styles.voiceTitle}>{asistente.nombre}</Text>
             <Text style={styles.voiceStatus}>{estadoVoz}</Text>
           </Pressable>
           {dictado.error ? <Text style={styles.voiceError}>{dictado.error}</Text> : null}
@@ -372,7 +377,7 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <View style={styles.profileAvatarWrap}>
               <HologramAvatar emotion={currentEmotion} size="lg" />
             </View>
-            <Text style={styles.profileName}>Amiga Hamilton</Text>
+            <Text style={styles.profileName}>{asistente.nombre}</Text>
             <Text style={styles.profileStatus}>en línea</Text>
             <Text style={styles.profileDesc}>
               Tu acompañante personal para el bienestar emocional. Estoy aquí para escucharte,
@@ -385,7 +390,7 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             </View>
             <View style={styles.profileInfoRow}>
               <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.tertiary} />
-              <Text style={styles.profileInfoText}>Evaluación personalizada Hamilton</Text>
+              <Text style={styles.profileInfoText}>Evaluación basada en la escala de Hamilton</Text>
             </View>
           </View>
         </View>

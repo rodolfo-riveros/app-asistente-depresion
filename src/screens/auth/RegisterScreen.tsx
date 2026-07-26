@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, Pressable, ScrollView, Alert } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SpatialContainer } from '../../components/SpatialContainer';
 import { GlassCard } from '../../components/GlassCard';
 import { AuthInput } from '../../components/AuthInput';
@@ -59,7 +56,9 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(700).springify().damping(15)} style={styles.header}>
+        <Animated.View
+          entering={FadeInDown.duration(700).springify().damping(15)}
+          style={styles.header}>
           <Text style={styles.title}>Crear una Cuenta</Text>
           <Text style={styles.subtitle}>
             Regístrate para tener un espacio seguro donde conversar
@@ -125,8 +124,7 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             style={({ pressed }) => [styles.loginLink, pressed && { opacity: 0.7 }]}
             onPress={() => navigation.navigate('Login')}>
             <Text style={styles.loginLinkText}>
-              ¿Ya tienes una cuenta?{' '}
-              <Text style={styles.loginHighlight}>Inicia Sesión</Text>
+              ¿Ya tienes una cuenta? <Text style={styles.loginHighlight}>Inicia Sesión</Text>
             </Text>
           </Pressable>
         </Animated.View>

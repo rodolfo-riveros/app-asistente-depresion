@@ -4,7 +4,8 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ChatNavigator } from './ChatNavigator';
-import { HistoryScreen } from '../screens/history/HistoryScreen';
+import { ActividadesScreen } from '../screens/actividades/ActividadesScreen';
+import { DiagnosticoScreen } from '../screens/diagnostico/DiagnosticoScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { colors } from '../constants/colors';
 import { glassTint } from '../constants/glass';
@@ -22,16 +23,16 @@ export const AppNavigator: React.FC = () => {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
         tabBarHideOnKeyboard: true,
-        // Mismo aspecto de antes; el blur real lo pone expo-blur (backdropFilter
-        // sólo funcionaba en web y RN no lo tipa).
         tabBarBackground: () => <BlurView intensity={24} tint={glassTint} style={styles.tabBlur} />,
         tabBarIcon: ({ focused }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'chatbubble-ellipses-outline';
           if (route.name === 'ChatTab')
             iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
-          else if (route.name === 'HistoryTab')
+          else if (route.name === 'ActividadesTab')
+            iconName = focused ? 'checkmark-circle' : 'checkmark-circle-outline';
+          else if (route.name === 'DiagnosticoTab')
             iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-          else if (route.name === 'ProfileTab') iconName = focused ? 'person' : 'person-outline';
+          else if (route.name === 'PerfilTab') iconName = focused ? 'person' : 'person-outline';
 
           return (
             <Ionicons
@@ -43,8 +44,17 @@ export const AppNavigator: React.FC = () => {
         },
       })}>
       <Tab.Screen name="ChatTab" component={ChatNavigator} options={{ title: 'Chat' }} />
-      <Tab.Screen name="HistoryTab" component={HistoryScreen} options={{ title: 'Histórico' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Perfil' }} />
+      <Tab.Screen
+        name="ActividadesTab"
+        component={ActividadesScreen}
+        options={{ title: 'Actividades' }}
+      />
+      <Tab.Screen
+        name="DiagnosticoTab"
+        component={DiagnosticoScreen}
+        options={{ title: 'Diagnóstico' }}
+      />
+      <Tab.Screen name="PerfilTab" component={ProfileScreen} options={{ title: 'Perfil' }} />
     </Tab.Navigator>
   );
 };
@@ -53,14 +63,14 @@ const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
     bottom: 16,
-    left: 50,
-    right: 50,
-    height: 64,
-    borderRadius: 32,
+    left: 40,
+    right: 40,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderTopWidth: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     paddingTop: 6,
     paddingBottom: 4,
     shadowColor: '#000',
@@ -71,7 +81,7 @@ const styles = StyleSheet.create({
   },
   tabBlur: {
     flex: 1,
-    borderRadius: 32,
+    borderRadius: 30,
     overflow: 'hidden',
   },
   tabLabel: {

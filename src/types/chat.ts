@@ -22,14 +22,6 @@ export interface HamiltonResult {
   sesion_id: string;
 }
 
-export interface ChatSession {
-  sesion_id: string;
-  messages: ChatMessage[];
-  test_completo: boolean;
-  protocolo_crisis_activo: boolean;
-  resultado?: HamiltonResult;
-}
-
 export interface MentalHealthCenter {
   id: string;
   nombre: string;

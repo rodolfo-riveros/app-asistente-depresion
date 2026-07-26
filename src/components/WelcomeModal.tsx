@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/colors';
+import { asistente } from '../constants/asistente';
 import { spacing } from '../constants/spacing';
 import { AuthButton } from './AuthButton';
 import { Glass, GlassScrim } from './Glass';
@@ -19,7 +20,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ visible, onClose }) 
           <View style={styles.iconRow}>
             <Ionicons name="compass-outline" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Asistente Hamilton</Text>
+          <Text style={styles.title}>{asistente.nombre}</Text>
           <Text style={styles.subtitle}>Tu acompañante para el bienestar mental</Text>
 
           <View style={styles.features}>

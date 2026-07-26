@@ -15,6 +15,7 @@ import { AvatarAssistant } from '../../components/AvatarAssistant';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { colors } from '../../constants/colors';
+import { asistente } from '../../constants/asistente';
 import { spacing } from '../../constants/spacing';
 import { useAuth } from '../../hooks/useAuth';
 import { validation } from '../../utils/validation';
@@ -30,11 +31,8 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   useEffect(() => {
     pulse.value = withRepeat(
-      withSequence(
-        withTiming(1.03, { duration: 2000 }),
-        withTiming(1, { duration: 2000 }),
-      ),
-      -1,
+      withSequence(withTiming(1.03, { duration: 2000 }), withTiming(1, { duration: 2000 })),
+      -1
     );
   }, []);
 
@@ -77,11 +75,13 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(700).springify().damping(15)} style={styles.header}>
+        <Animated.View
+          entering={FadeInDown.duration(700).springify().damping(15)}
+          style={styles.header}>
           <Animated.View style={avatarStyle}>
             <AvatarAssistant size="lg" emotion="inspiring" />
           </Animated.View>
-          <Text style={styles.appName}>Asistente Hamilton</Text>
+          <Text style={styles.appName}>{asistente.nombre}</Text>
           <Text style={styles.tagline}>Tu acompañante para el bienestar mental</Text>
         </Animated.View>
 
@@ -137,8 +137,7 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
             onPress={() => navigation.navigate('Register')}>
             <Text style={styles.linkText}>
-              ¿No tienes cuenta?{' '}
-              <Text style={styles.linkHighlight}>Regístrate</Text>
+              ¿No tienes cuenta? <Text style={styles.linkHighlight}>Regístrate</Text>
             </Text>
           </Pressable>
         </Animated.View>

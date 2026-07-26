@@ -16,9 +16,12 @@ export const SpatialContainer: React.FC<SpatialContainerProps> = ({
   variant = 'normal',
 }) => {
   const isCrisis = variant === 'crisis';
-  const overlayColors = isCrisis
-    ? ['rgba(26, 10, 10, 0.80)', 'rgba(30, 45, 68, 0.70)', 'rgba(16, 26, 45, 0.80)']
-    : ['rgba(16, 26, 45, 0.88)', 'rgba(23, 36, 58, 0.80)', 'rgba(26, 26, 53, 0.88)'];
+  // Tupla explícita: LinearGradient exige al menos dos colores en su tipo.
+  const overlayColors = (
+    isCrisis
+      ? ['rgba(26, 10, 10, 0.80)', 'rgba(30, 45, 68, 0.70)', 'rgba(16, 26, 45, 0.80)']
+      : ['rgba(16, 26, 45, 0.88)', 'rgba(23, 36, 58, 0.80)', 'rgba(26, 26, 53, 0.88)']
+  ) as readonly [string, string, ...string[]];
   const topGlow = isCrisis ? colors.glowCrisis : colors.softGlow;
   const topGlowSoft = isCrisis ? colors.glowCrisisSoft : colors.glowPrimarySoft;
 

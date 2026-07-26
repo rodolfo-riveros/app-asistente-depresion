@@ -78,3 +78,11 @@ Palette: background `#0b1326` (Midnight), primary soft blue `#c6dfff`, secondary
 ## Crisis protocol
 Detection keywords: `suicid`, `matar`, `sin sentido`, `no quiero vivir`, `morir`, `terminar con todo`, `ayuda urgente`, `crisis`.
 Triggering crisis mode shows helpline info (Línea 113 Opción 5, SAMU 106) and Cusco mental health centers with Google Maps integration. Location permissions requested on demand via `ubicacion_solicitada` flag from the backend.
+
+## Conversación continua (v2)
+- El backend mantiene **un hilo único por usuario**, estilo mensajería. La app NO gestiona `sesion_id`: envía el mensaje y el backend elige el hilo abierto del usuario.
+- Al abrir, `ChatContext` carga `GET /chat/historial` (toda la conversación). El flag `restaurando` indica que aún se está trayendo.
+- Memoria del asistente: tabla `preferencias` + perfil + actividades pendientes se inyectan en el system prompt (`app/chat/companero.py` en el backend). Por eso recuerda gustos entre sesiones aunque se recorte el historial reciente.
+- Voz: TTS en el dispositivo (`expo-speech`, con limpieza de markdown y troceo en `src/services/voz.ts`); STT en el backend (`POST /voz/transcribir`).
+- Perfil: `src/services/perfil.ts` → `GET/PUT /perfil`, `POST /perfil/foto` (Supabase Storage) y `GET /actividades`.
+- Endpoints nuevos del chat: `GET /chat/historial`, `GET /chat/sesiones`, `GET /chat/sesiones/ultima`, `GET /chat/sesiones/{id}`.
