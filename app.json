@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Asistente Hamilton",
+    "name": "Aurora",
     "slug": "app-asistente-depresion",
     "version": "1.0.0",
     "web": {
@@ -14,7 +14,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash.png",
-          "backgroundColor": "#0b1326"
+          "backgroundColor": "#101a2d"
         }
       ],
       [
@@ -28,13 +28,16 @@
         {
           "microphonePermission": "Permite grabar tu voz para que puedas conversar hablando con el asistente en lugar de escribir."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0b1326",
-    "assetBundlePatterns": ["**/*"],
+    "backgroundColor": "#101a2d",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -42,11 +45,28 @@
       }
     },
     "android": {
+      "package": "com.rdo0711.aurora",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#EDF4F3"
+        "backgroundColor": "#101a2d"
       },
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "RECORD_AUDIO"]
-    }
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "831b13b0-5f02-4b5e-b086-ba01d437cf2a"
+      }
+    },
+    "owner": "rdo0711"
   }
 }
