@@ -6,6 +6,7 @@ import { radius } from '../constants/spacing';
 import { lineaAyuda } from '../constants/asistente';
 import { ANCHO_MAXIMO } from '../hooks/useLayout';
 import { Button, Card, IconButton, IconTile, Icon, Txt } from './ui';
+import { ContactoConfianza } from './ContactoConfianza';
 
 interface CrisisAlertProps {
   visible: boolean;
@@ -139,6 +140,9 @@ export const CrisisAlert: React.FC<CrisisAlertProps> = ({
               numero={lineaAyuda.telefono}
             />
             <LineaFila titulo="SAMU 106" detalle="Urgencias médicas · 24 horas" numero="106" />
+
+            {/* Persona de confianza (v5): un toque para llamarla o escribirle. */}
+            <ContactoConfianza onAntesDeNavegar={onClose} />
 
             <Button
               label="Buscar centros cercanos en Cusco"

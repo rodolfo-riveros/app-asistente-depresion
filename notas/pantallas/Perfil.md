@@ -61,3 +61,9 @@
 ## Chat como amiga (2026-10-12)
 Ver [[Chat como amiga]].
 - Fila **"Ubicación"** en Ajustes (tras la voz): "Activada · para recomendarte centros cercanos" con ✓, o "Permitir" (diálogo del sistema) / "Abrir ajustes" (bloqueada). Se actualiza sola al volver de Ajustes (`usePermisoUbicacion`).
+
+## v5 (2026-10-13)
+Ver [[Chat v5 y build]].
+- **Sin foto de perfil** (saturaba el almacenamiento): avatar = inicial sobre `accent`, decorativo, sin insignia de cámara ni toque. Fuera `expo-image-picker` (paquete, plugin y permiso de fotos), `perfilService.subirFoto` y `foto_url`. Deja de valer "éxito al subir la foto" en hápticos.
+- **Parámetro `PerfilTab { personaConfianza: true }`**: abre la hoja de persona de confianza (desde crisis). Sin efecto: la hoja es visible si `editandoPersona || param`; al cerrarla se limpia el parámetro.
+- Privacidad: "la app no guarda fotos"; la ficha PDF incluye ánimo y persona de confianza y sólo sale del teléfono si se comparte.

@@ -1,11 +1,13 @@
-import { Platform } from 'react-native';
 import { api } from './api';
 
+/**
+ * Sin foto de perfil (v5, 2026-10-13): el avatar es la inicial sobre `accent`.
+ * Si un backend anterior aún manda `foto_url`, se ignora.
+ */
 export interface Perfil {
   id: string;
   nombre: string;
   email?: string | null;
-  foto_url?: string | null;
   edad?: number | null;
   ciudad?: string | null;
   ocupacion?: string | null;
@@ -39,31 +41,5 @@ export const perfilService = {
       ])
     );
     return api.request<Perfil>('put', '/perfil', cuerpo, 'No se pudo guardar tu perfil.');
-  },
-
-  /**
-   * Sube la foto de perfil (`POST /perfil/foto`, campo multipart `foto`; el
-   * backend acepta JPG, PNG o WEBP de hasta 5 MB). `uri` viene del selector.
-   */
-  async subirFoto(uri: string): Promise<Perfil> {
-    const form = new FormData();
-    const sufijo = uri.split('?')[0].split('.').pop()?.toLowerCase();
-    const extension = sufijo === 'png' ? 'png' : sufijo === 'webp' ? 'webp' : 'jpg';
-    const tipo = extension === 'jpg' ? 'image/jpeg' : `image/${extension}`;
-
-    if (Platform.OS === 'web') {
-      // En web la uri es un blob:/data: sin extensión: manda el tipo real del archivo.
-      const blob = await (await fetch(uri)).blob();
-      const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
-      form.append('foto', blob, `perfil.${ext}`);
-    } else {
-      form.append('foto', {
-        uri,
-        name: `perfil.${extension}`,
-        type: tipo,
-      } as unknown as Blob);
-    }
-
-    return api.subirMultipart<Perfil>('/perfil/foto', form, 'No se pudo subir la imagen.');
   },
 };

@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { Alert, Linking, Platform, Pressable, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Button, Icon, IconName, IconTile, Txt } from '../../../components/ui';
+import { ContactoConfianza } from '../../../components/ContactoConfianza';
 import { colors } from '../../../constants/colors';
 import { radius } from '../../../constants/spacing';
 import { useLayout } from '../../../hooks/useLayout';
@@ -259,6 +260,10 @@ export const AccionesMensaje: React.FC<AccionesMensajeProps> = React.memo(
               onPress={() => llamar(a.telefono)}
             />
           );
+
+        case 'contacto_confianza':
+          // Se resuelve en el teléfono con la persona de confianza guardada (v5).
+          return <ContactoConfianza key={key} titulo={a.titulo} />;
 
         case 'actividad':
           return (

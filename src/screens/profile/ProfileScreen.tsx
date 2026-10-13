@@ -2,14 +2,12 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Platform,
   Pressable,
   RefreshControl,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, Chip, Divider, Icon, Screen, Title, Toggle, Txt } from '../../components/ui';
 import { PermisoNotificaciones } from '../../components/PermisoNotificaciones';
@@ -201,7 +199,7 @@ const FilaAjuste: React.FC<{
 
 /* ------------------------------------------------------------ Pantalla */
 
-export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigation }) => {
+export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigation, route }) => {
   const { user, logout } = useAuth();
   const { anchoContenido, compacto, escala, fontScale } = useLayout();
   const avatar = compacto ? 52 : escala(56);
@@ -215,7 +213,6 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
   const [errorStats, setErrorStats] = useState(false);
   const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
-  const [subiendoFoto, setSubiendoFoto] = useState(false);
 
   const [editando, setEditando] = useState(false);
   const [editandoPersona, setEditandoPersona] = useState(false);
@@ -223,6 +220,14 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
 
   const permiso = usePermisoNotificaciones();
   const permisoUbicacion = usePermisoUbicacion();
+
+  // Desde una crisis ("Añadir persona de confianza") se llega con la hoja abierta
+  // (parámetro de navegación). Al cerrarla se limpia para no reabrirla en cada visita.
+  const hojaPersonaVisible = editandoPersona || route.params?.personaConfianza === true;
+  const cerrarHojaPersona = () => {
+    setEditandoPersona(false);
+    if (route.params?.personaConfianza) navigation.setParams({ personaConfianza: undefined });
+  };
 
   /** Preferencias y persona de confianza viven en el teléfono: no esperan a la red. */
   const cargarLocal = useCallback(async () => {
@@ -270,55 +275,6 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
   };
 
   /* --------------------------------------------------------- Acciones */
-
-  /**
-   * El selector del sistema (Photo Picker en Android 13+, PHPicker en iOS) no
-   * necesita permiso de galería: sólo comparte la foto que eliges. Por eso no se
-   * pide `requestMediaLibraryPermissionsAsync` (además, `READ_EXTERNAL_STORAGE`
-   * está bloqueado en app.json y en Android ≤ 12 la petición se denegaría
-   * siempre). Si aun así el sistema niega el acceso, se explica y se ofrece Ajustes.
-   */
-  const cambiarFoto = async () => {
-    if (subiendoFoto) return;
-
-    let elegida: ImagePicker.ImagePickerResult;
-    try {
-      elegida = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-    } catch {
-      Alert.alert(
-        'No se pudieron abrir tus fotos',
-        'Para elegir una foto de perfil, la app necesita ver tus fotos. Sólo se usa la que ' +
-          'elijas. Puedes permitirlo en los Ajustes del teléfono.',
-        [
-          { text: 'Ahora no', style: 'cancel' },
-          {
-            text: 'Abrir Ajustes',
-            onPress: () =>
-              Linking.openSettings().catch(() =>
-                Alert.alert('No se pudo abrir Ajustes', 'Ábrelos desde el menú del teléfono.')
-              ),
-          },
-        ]
-      );
-      return;
-    }
-    if (elegida.canceled || !elegida.assets?.[0]?.uri) return;
-
-    setSubiendoFoto(true);
-    try {
-      setPerfil(await perfilService.subirFoto(elegida.assets[0].uri));
-      haptico.exito();
-    } catch (e) {
-      Alert.alert('No se pudo subir la foto', mensajeDe(e));
-    } finally {
-      setSubiendoFoto(false);
-    }
-  };
 
   /** Guarda una preferencia de forma optimista y la revierte si falla. */
   const cambiarPreferencia = async (cambios: Partial<Preferencias>) => {
@@ -448,67 +404,22 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
       {/* Identidad + estadísticas */}
       <Card gap={16}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Pressable
-            onPress={cambiarFoto}
-            accessibilityRole="button"
-            accessibilityLabel="Cambiar foto de perfil"
-            accessibilityHint="Abre tus fotos; sólo se usa la que elijas"
-            accessibilityState={{ busy: subiendoFoto }}
-            style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
-            <View
-              style={{
-                width: avatar,
-                height: avatar,
-                borderRadius: avatar / 2,
-                backgroundColor: colors.accent,
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
-              {perfil?.foto_url ? (
-                <Image
-                  source={{ uri: perfil.foto_url }}
-                  style={{ width: avatar, height: avatar }}
-                  accessibilityIgnoresInvertColors
-                />
-              ) : (
-                <Txt size={22} weight="bold">
-                  {inicial}
-                </Txt>
-              )}
-              {subiendoFoto && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: colors.scrim,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <ActivityIndicator color={colors.white} />
-                </View>
-              )}
-            </View>
-            <View
-              style={{
-                position: 'absolute',
-                right: -2,
-                bottom: -2,
-                width: 22,
-                height: 22,
-                borderRadius: 11,
-                backgroundColor: colors.ink,
-                borderWidth: 2,
-                borderColor: colors.surface,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Icon name="camera" size={11} color={colors.onDark} strokeWidth={2.2} />
-            </View>
-          </Pressable>
+          {/* Sin foto de perfil (v5): la inicial sobre `accent`, decorativa. */}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              width: avatar,
+              height: avatar,
+              borderRadius: avatar / 2,
+              backgroundColor: colors.accent,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Txt size={22} weight="bold">
+              {inicial}
+            </Txt>
+          </View>
 
           <View style={{ flex: 1, gap: 2 }}>
             <Txt size={17} weight="bold" numberOfLines={1}>
@@ -692,9 +603,9 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
         onGuardado={setPerfil}
       />
       <PersonaConfianzaHoja
-        visible={editandoPersona}
+        visible={hojaPersonaVisible}
         persona={persona}
-        onClose={() => setEditandoPersona(false)}
+        onClose={cerrarHojaPersona}
         onGuardar={guardarPersona}
       />
       <Hoja

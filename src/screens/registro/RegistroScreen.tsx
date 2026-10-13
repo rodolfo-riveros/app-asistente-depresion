@@ -6,7 +6,8 @@ import { colors } from '../../constants/colors';
 import { asistente } from '../../constants/asistente';
 import { animo } from '../../utils/animo';
 import { formatters } from '../../utils/formatters';
-import { construirHtmlFicha, construirResumenTexto } from '../../utils/fichaPdf';
+import { construirResumenTexto, prepararHtmlFicha } from '../../utils/fichaPdf';
+import { useAuth } from '../../hooks/useAuth';
 import {
   Diagnostico,
   diagnosticoService,
@@ -85,6 +86,9 @@ const mensajeError = (e: unknown): string => {
 
 export const RegistroScreen: React.FC<TabScreenProps<'RegistroTab'>> = ({ navigation }) => {
   const { anchoContenido, fontScale } = useLayout();
+  const { user } = useAuth();
+  /** Datos de la cuenta para el informe (el resto lo reúne `prepararHtmlFicha`). */
+  const cuenta = { apodo: user?.nombre ?? null, correo: user?.email ?? null };
   /**
    * Dos botones en fila sólo si caben: "Ver especialistas" + "Compartir resumen"
    * no entran en 360 px (ni en 430 px con fuente al 130 %) → se apilan.
@@ -157,7 +161,7 @@ export const RegistroScreen: React.FC<TabScreenProps<'RegistroTab'>> = ({ naviga
     try {
       // Import diferido: si el módulo nativo no está en este build, no rompe la pantalla.
       const Print = await import('expo-print');
-      await Print.printAsync({ html: construirHtmlFicha(ficha) });
+      await Print.printAsync({ html: await prepararHtmlFicha(ficha, cuenta) });
     } catch (e) {
       // Cancelar el diálogo de impresión lanza excepción en iOS: no es un error.
       const mensaje = e instanceof Error ? e.message : '';
@@ -186,7 +190,9 @@ export const RegistroScreen: React.FC<TabScreenProps<'RegistroTab'>> = ({ naviga
         Sharing = await import('expo-sharing');
         if (await Sharing.isAvailableAsync()) {
           const Print = await import('expo-print');
-          uri = (await Print.printToFileAsync({ html: construirHtmlFicha(ficha) })).uri;
+          const html = await prepararHtmlFicha(ficha, cuenta);
+          // A4 en puntos (por defecto expo-print usa carta, 612×792).
+          uri = (await Print.printToFileAsync({ html, width: 595, height: 842 })).uri;
         }
       } catch {
         uri = null;

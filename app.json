@@ -30,14 +30,6 @@
           "microphonePermission": "El micrófono se usa solo mientras hablas con la asistente, para convertir tu voz en texto."
         }
       ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Permite elegir una foto para tu perfil.",
-          "cameraPermission": false,
-          "microphonePermission": false
-        }
-      ],
       "expo-sharing",
       "expo-font",
       "expo-asset",

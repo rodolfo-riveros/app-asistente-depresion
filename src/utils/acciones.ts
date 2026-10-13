@@ -61,6 +61,8 @@ const normalizarUna = (raw: unknown): Accion | null => {
       return { tipo: 'llamar', titulo, telefono: a.telefono };
     case 'actividad':
       return { tipo: 'actividad', titulo, actividad_id: textoOpcional(a.actividad_id) };
+    case 'contacto_confianza':
+      return { tipo: 'contacto_confianza', titulo };
     default:
       return null;
   }
@@ -70,4 +72,28 @@ const normalizarUna = (raw: unknown): Accion | null => {
 export const normalizarAcciones = (raw: unknown): Accion[] => {
   if (!Array.isArray(raw)) return [];
   return raw.map(normalizarUna).filter((a): a is Accion => a !== null);
+};
+
+/** Máximo de respuestas rápidas y de caracteres por opción (contrato v5). */
+const MAX_OPCIONES = 5;
+const MAX_LARGO_OPCION = 32;
+
+/**
+ * Respuestas rápidas (v5), tolerante: sólo textos no vacíos, sin duplicados,
+ * recortados al contrato. Devuelve `[]` si no llegó nada válido.
+ */
+export const normalizarOpciones = (raw: unknown): string[] => {
+  if (!Array.isArray(raw)) return [];
+  const vistas = new Set<string>();
+  const opciones: string[] = [];
+  for (const o of raw) {
+    if (!texto(o)) continue;
+    const limpia = o.trim().slice(0, MAX_LARGO_OPCION);
+    const clave = limpia.toLowerCase();
+    if (vistas.has(clave)) continue;
+    vistas.add(clave);
+    opciones.push(limpia);
+    if (opciones.length >= MAX_OPCIONES) break;
+  }
+  return opciones;
 };

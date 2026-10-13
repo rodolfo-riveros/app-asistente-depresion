@@ -35,7 +35,9 @@ export type Accion =
     }
   | { tipo: 'buscar_mapa'; titulo: string; maps_url: string }
   | { tipo: 'llamar'; titulo: string; telefono: string }
-  | { tipo: 'actividad'; titulo: string; actividad_id?: string | null };
+  | { tipo: 'actividad'; titulo: string; actividad_id?: string | null }
+  /** Crisis (v5): la app lo resuelve con la persona de confianza guardada en el teléfono. */
+  | { tipo: 'contacto_confianza'; titulo: string };
 
 export interface ChatMessage {
   id: string;
@@ -45,6 +47,11 @@ export interface ChatMessage {
   emotion?: AssistantEmotion;
   /** Botones bajo la burbuja de la asistente (música, recursos, mapas…). */
   acciones?: Accion[];
+  /**
+   * Respuestas rápidas tipo encuesta (v5). Sólo en la respuesta recién llegada:
+   * no se guardan en el historial, así que nunca vienen en mensajes restaurados.
+   */
+  opciones?: string[];
 }
 
 export type DepressionLevel =

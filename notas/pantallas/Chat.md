@@ -62,3 +62,9 @@ Ver [[Chat como amiga]].
 - **Botones de acción** bajo la burbuja de la asistente (`components/AccionesMensaje.tsx`), cuando el mensaje trae `acciones`: música (Spotify / YouTube Music), recurso (abre la guía en Recursos), centro (Cómo llegar / Llamar), buscar en Google Maps, llamar, actividad (→ Actividades). Filas/tarjetas blancas radio 18 con `IconTile`, píldoras `Button sm` (≥ 44 px), apiladas en 360 px o con fuente grande; ancho ≈ 90 % del contenido (techo 440). Onda Android `colors.ripple`, opacidad iOS.
 - **Ubicación**: `LocationPermissionModal` se sustituye por `PermisoUbicacionHoja` (estado real del permiso, "Abrir ajustes" si está bloqueado). Sólo aparece si falta el permiso; con permiso, `ubicacion_solicitada` comparte la posición sola y "Buscar centros cercanos" (crisis) abre directamente la hoja de centros.
 - Los mensajes ya llevan lat/lon automáticamente (`ChatContext`), sin bloquear el envío más de ~1,5 s.
+
+## v5 (2026-10-13)
+Ver [[Chat v5 y build]].
+- **Respuestas rápidas tipo encuesta** (`components/RespuestasRapidas.tsx`): bajo el último mensaje de la asistente si trae `opciones` y no se está esperando respuesta. 2–3 → filas a todo el ancho; 4–5 → píldoras que parten línea. Borde `forest`, ≥ 44 px, háptico ligero. Tocar = enviar ese texto; desaparecen al enviar cualquier cosa. Nunca en mensajes restaurados (no se guardan en el historial). El campo de texto sigue disponible.
+- **Acción `contacto_confianza`** en `AccionesMensaje` → `ContactoConfianza` (llamar / WhatsApp / SMS a la persona de confianza, o "Añadir persona de confianza" → Perfil).
+- `CrisisAlert` incluye `ContactoConfianza` tras 113/106 (cierra el aviso antes de ir a Perfil).

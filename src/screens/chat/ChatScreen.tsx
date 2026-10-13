@@ -20,6 +20,7 @@ import { PermisoUbicacionHoja } from '../../components/PermisoUbicacion';
 import { usePermisoUbicacion } from '../../hooks/usePermisoUbicacion';
 import { ubicacionActual } from '../../services/ubicacion';
 import { AccionesMensaje } from './components/AccionesMensaje';
+import { RespuestasRapidas } from './components/RespuestasRapidas';
 import { WelcomeModal } from '../../components/WelcomeModal';
 import { PermisoMicrofono } from '../../components/PermisoMicrofono';
 import { Button, Icon, Txt } from '../../components/ui';
@@ -362,15 +363,41 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
     Math.round((anchoContenido - MARGEN_LATERAL * 2) * PROPORCION_ACCIONES)
   );
 
+  // Respuestas rápidas (v5): sólo bajo el ÚLTIMO mensaje, si es de la asistente y
+  // no se está esperando otra respuesta. Al enviar algo deja de ser el último y
+  // desaparecen. Los mensajes restaurados nunca las traen (no se guardan).
+  const ultimo = messages[messages.length - 1];
+  const idConOpciones =
+    !loading && ultimo?.role === 'assistant' && ultimo.opciones?.length ? ultimo.id : null;
+
+  const responderOpcion = (opcion: string) => {
+    if (loading) return;
+    setAnotado(false);
+    alFinalRef.current = true;
+    sendMessage(opcion);
+  };
+
   const renderFila = ({ item }: { item: Fila }) => {
     if (item.tipo === 'fecha') return <SeparadorFecha etiqueta={item.etiqueta} />;
     const { mensaje } = item;
     const acciones = mensaje.role === 'assistant' ? mensaje.acciones : undefined;
-    if (!acciones?.length) return <ChatBubble message={mensaje} anchoMaximo={anchoBurbuja} />;
+    const opciones = mensaje.id === idConOpciones ? mensaje.opciones : undefined;
+    if (!acciones?.length && !opciones?.length) {
+      return <ChatBubble message={mensaje} anchoMaximo={anchoBurbuja} />;
+    }
     return (
       <View style={{ gap: 8 }}>
         <ChatBubble message={mensaje} anchoMaximo={anchoBurbuja} />
-        <AccionesMensaje acciones={acciones} anchoMaximo={anchoAcciones} />
+        {acciones?.length ? (
+          <AccionesMensaje acciones={acciones} anchoMaximo={anchoAcciones} />
+        ) : null}
+        {opciones?.length ? (
+          <RespuestasRapidas
+            opciones={opciones}
+            onElegir={responderOpcion}
+            anchoMaximo={anchoAcciones}
+          />
+        ) : null}
       </View>
     );
   };
@@ -447,6 +474,8 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
             data={filas}
             keyExtractor={(f) => f.key}
             renderItem={renderFila}
+            // Las respuestas rápidas dependen de `loading`, no sólo de los datos.
+            extraData={idConOpciones}
             ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             // La lista ocupa todo el ancho (se desplaza tocando en cualquier sitio);
             // su contenido es una columna centrada de ANCHO_MAXIMO en tablet.

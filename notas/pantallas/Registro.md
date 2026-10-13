@@ -50,3 +50,8 @@
 - Cabecera con título flexible (el candado no lo empuja). "Evolución / más bajo es mejor" con `flexWrap`.
 - "Ver especialistas" + "Compartir resumen" (y en `ResultScreen` "Ver especialistas" + "Compartir") se apilan a ancho completo si `anchoContenido / min(fontScale, 1.35) < 380` (360 px, o fuente al 130 %); en fila en 390–430 px y tablet.
 - Tablet: el centrado lo hace `Screen` (maxWidth 560).
+
+## v5 (2026-10-13)
+Ver [[Chat v5 y build]].
+- **Informe PDF para el psicólogo** rediseñado (`utils/fichaPdf.ts`, `prepararHtmlFicha`): A4 con marca "aliento" y fecha de emisión; datos de la persona (incl. correo de la cuenta), contacto de emergencia (persona de confianza del teléfono), última evaluación con barra de severidad, 17 ítems, evolución (SVG + tabla), ánimo de 14 días (`@mood_log`), actividades con cumplimiento y motivos, tendencia, aviso legal y espacio para observaciones/firma. "Sin registro" donde falte. `printToFileAsync` a 595×842 pt (A4).
+- "Imprimir" y "Compartir" usan el mismo HTML; el resumen en texto (plan B) no cambia de contenido.

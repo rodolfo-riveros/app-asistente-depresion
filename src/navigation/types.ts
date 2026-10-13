@@ -9,7 +9,8 @@ export type TabParamList = {
   RegistroTab: undefined;
   /** `abrir`: abre la guía de ese recurso (p. ej. desde un botón del chat). */
   RecursosTab: { abrir?: RecursoId } | undefined;
-  PerfilTab: undefined;
+  /** `personaConfianza`: abre la hoja de persona de confianza (p. ej. desde una crisis). */
+  PerfilTab: { personaConfianza?: boolean } | undefined;
 };
 
 /**

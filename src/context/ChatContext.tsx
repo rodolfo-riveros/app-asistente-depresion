@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { storage } from '../utils/storage';
 import { asistente } from '../constants/asistente';
 import { useAuth } from '../hooks/useAuth';
-import { normalizarAcciones } from '../utils/acciones';
+import { normalizarAcciones, normalizarOpciones } from '../utils/acciones';
 import { olvidarUbicacion, ubicacionRapida } from '../services/ubicacion';
 import type { MensajeGuardado } from '../types/api';
 
@@ -160,6 +160,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCurrentEmotion(emotion);
 
       const acciones = normalizarAcciones(response.acciones);
+      // v5: respuestas rápidas sólo para esta respuesta (no vienen en el historial).
+      const opciones = normalizarOpciones(response.opciones);
       const assistantMsg: ChatMessage = {
         id: 'msg-ast-' + Date.now(),
         role: 'assistant',
@@ -167,6 +169,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: new Date().toISOString(),
         emotion,
         ...(acciones.length > 0 ? { acciones } : {}),
+        ...(opciones.length > 0 ? { opciones } : {}),
       };
 
       setMessages((prev) => [...prev, assistantMsg]);

@@ -10,6 +10,7 @@ import { useLayout } from '../../hooks/useLayout';
 import { CUSCO_HEALTH_CENTERS } from '../../services/location';
 import { MentalHealthCenter } from '../../types/chat';
 import { abrirMapa, copiarNumero, llamar } from '../recursos/enlaces';
+import { ContactoConfianza } from '../../components/ContactoConfianza';
 
 type Coordenadas = { lat: number; lon: number };
 /**
@@ -152,6 +153,9 @@ export const CrisisProtocolScreen: React.FC<RootScreenProps<'CrisisProtocol'>> =
           líneas atienden gratis y con personas preparadas para escucharte.
         </Txt>
       </View>
+
+      {/* Persona de confianza (v5): arriba, es lo más cercano. */}
+      <ContactoConfianza />
 
       {/* Línea 113: la llamada principal, a un toque */}
       <Card tone="danger" gap={12}>

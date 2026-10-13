@@ -18,6 +18,11 @@ export interface ChatMessageResponse {
   resultado?: HamiltonResult;
   /** Botones de acción de esta respuesta (v4). Opcional: un backend anterior no lo manda. */
   acciones?: Accion[] | null;
+  /**
+   * Respuestas rápidas (v5) para la ÚLTIMA pregunta de la asistente: `[]` si no
+   * hay; máx. 5, cada una ≤ 32 caracteres. No se guardan en el historial.
+   */
+  opciones?: string[] | null;
 }
 
 export interface MensajeGuardado {

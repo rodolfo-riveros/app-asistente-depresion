@@ -39,7 +39,7 @@ export const privacidad: SeccionLegal[] = [
   {
     titulo: 'Qué se guarda en el servidor',
     parrafos: [
-      'Tu cuenta (nombre o apodo, correo y contraseña cifrada), tu perfil (edad, ciudad, ocupación, bio y foto, si los añades), tus conversaciones, los resultados de tus chequeos de ánimo (escala de Hamilton) y las actividades que acuerdas.',
+      'Tu cuenta (nombre o apodo, correo y contraseña cifrada), tu perfil (edad, ciudad, ocupación y bio, si los añades; la app no guarda fotos), tus conversaciones, los resultados de tus chequeos de ánimo (escala de Hamilton) y las actividades que acuerdas.',
       'Se almacena en Supabase (base de datos y autenticación). Solo tu sesión puede consultar tus datos.',
     ],
   },
@@ -69,7 +69,7 @@ export const privacidad: SeccionLegal[] = [
     titulo: 'Tus derechos',
     parrafos: [
       `Puedes acceder a tus datos, corregirlos, pedir que se borren u oponerte a su uso (derechos ARCO). Para ejercerlos, ${contacto}.`,
-      'Puedes editar tu perfil desde la pestaña Perfil y compartir tu ficha desde Registro.',
+      'Puedes editar tu perfil desde la pestaña Perfil y compartir tu ficha desde Registro. La ficha PDF se genera en tu teléfono e incluye tu registro de ánimo y tu persona de confianza (como contacto de emergencia); sólo sale de él si tú la compartes.',
     ],
   },
 ];
