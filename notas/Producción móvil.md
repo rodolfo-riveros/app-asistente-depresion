@@ -30,7 +30,7 @@ Revisión para publicar (iniciada 2026-10-08, a pedido del usuario). El backend 
 ## Pendiente fuera de esta revisión
 - ~~Notificaciones reales del "Recordatorio diario"~~ ✅ hecho, ver [[Notificaciones y voz]]. Probar en APK/build de desarrollo (Expo Go Android no las soporta).
 - ~~Conectar backend real~~ ✅ (2026-10-12), ver [[Integración backend y adaptación]].
-- Nombre visible de la app en `app.json` sigue siendo "Aurora" (marca del diseño: "aliento") — decidir.
+- ✅ Nombre visible de la app: **aliento** (2026-10-12, decisión del usuario). Aurora sigue siendo la asistente. Identificadores `com.rdo0711.aurora` sin cambiar (aún no publicada; cambiarlos después sería una app nueva).
 - Probar en dispositivo: necesita `npx expo start -c` (Expo Go) o nuevo build EAS (se añadieron módulos nativos: keyboard-controller, system-ui, haptics).
 - **Términos y privacidad**: ✅ pantalla en la app (2026-10-12). Falta: correo de contacto, revisión legal y URL pública para las tiendas.
 - **Probar primero en Android real:** barra del chat sobre el teclado (offset negativo), con navegación por gestos y con 3 botones.
