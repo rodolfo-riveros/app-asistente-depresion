@@ -45,7 +45,7 @@ Revisión para publicar (iniciada 2026-10-08, a pedido del usuario). El backend 
 
 ## ¿Lista para usarse? (2026-10-12)
 - [x] Supabase nuevo con tablas y bucket (verificado).
-- [ ] **Render**: cambiar `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (hoy responde 500/503 porque apunta al proyecto borrado).
+- [x] Render conectado al Supabase nuevo (verificado 2026-10-12).
 - [x] Confirmación de correo: ya no hace falta (registro auto-confirmado desde el backend).
 - [ ] iPhone/Expo Go: confirmar con foto que carga `botones-v3` y que se ven los botones.
 - [ ] Probar APK (`eas build -p android --profile preview`): registro, chat, voz, recordatorio.
