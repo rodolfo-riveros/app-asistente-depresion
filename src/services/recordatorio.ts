@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type * as NotificationsNS from 'expo-notifications';
 import { app, asistente } from '../constants/asistente';
 import { Preferencias, preferencias } from '../utils/preferencias';
@@ -31,6 +32,14 @@ let modulo: Promise<Notifs | null> | null = null;
 
 const cargar = (): Promise<Notifs | null> => {
   if (Platform.OS === 'web') return Promise.resolve(null);
+  // Expo Go en Android (SDK 53+) ya no trae notificaciones y el módulo lanza un
+  // ERROR sólo con importarlo. Allí no se carga; en el APK / build de desarrollo sí.
+  if (
+    Platform.OS === 'android' &&
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+  ) {
+    return Promise.resolve(null);
+  }
   if (!modulo) {
     modulo = import('expo-notifications').then(
       (m) => m as Notifs,

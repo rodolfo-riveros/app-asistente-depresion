@@ -10,6 +10,7 @@
 - [[Notificaciones y voz]] — recordatorio diario (notificación local) y voz femenina calmada (teléfono + nube vía backend).
 - [[Integración backend y adaptación]] — backend real (contratos, /voz/sintetizar) y diseño adaptable a Android/iOS (tamaños, tablets, fuente del sistema).
 - [[Chat como amiga]] — conversación espontánea, test espaciado, botones de acción (música, recursos, mapas, actividades) y ubicación tras el registro.
+- [[Chat v5 y build]] — respuestas tipo encuesta, análisis proactivo, modo recuperación, contacto de emergencia, PDF profesional, sin foto, build APK.
 
 ## Pantallas
 | # | Pantalla | Nota | Estado |

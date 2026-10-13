@@ -23,7 +23,7 @@ Pedido del usuario (2026-10-13):
 ## Estado
 - Backend: ✅ `ofrecer_opciones` → `opciones` en `/chat/mensaje`, propuesta concreta + "¿Lo agendamos?", modo seguimiento calculado en el backend, `contacto_confianza` en crisis, tests (2026-10-13, commit `099dd93` en `main`, sin push)
 - App: ✅ respuestas rápidas, sin foto de perfil (`expo-image-picker` fuera), contacto de confianza en crisis, informe PDF A4 para el psicólogo (2026-10-13, rama `rediseno-aliento`, sin push)
-- Build: ⏳
+- Build: ✅ listo para EAS (verificado 2026-10-13): `eas build -p android --profile preview`
 
 ## Backend · Hecho
 - **`opciones`** (`POST /chat/mensaje`, siempre presente, `[]` por defecto): tool `ofrecer_opciones(opciones)`; el backend las limpia (`acciones.normalizar_opciones`): espacios colapsados, recorte a 32 caracteres (por palabra si se puede), sin duplicados (sin distinguir mayúsculas), máx. 5; si quedan < 2 → `[]` y el modelo recibe `opciones_invalidas`. Si se llama varias veces en el turno, vale la última válida. **No se guardan** en `mensajes` ni salen en `/chat/historial`.

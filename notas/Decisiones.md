@@ -9,7 +9,7 @@ Registro de decisiones del rediseño. Formato: **decisión** — por qué. Añad
 - **Pestañas: Inicio · Registro · Recursos · Perfil** — del diseño. Chat y Voz se abren encima sin tab bar. "Actividades" deja de ser pestaña: se accede desde Inicio ("Para hoy") y sigue existiendo como pantalla.
 - **Se omiten**: "Entrar con huella", "Google", "Apple", "¿Olvidaste tu contraseña?", "Prefiero empezar sin cuenta", "Bloqueo con huella" — el backend no tiene esos flujos; un botón que no hace nada es peor que no tenerlo.
 - **Check-in de ánimo diario y preferencias se guardan en el dispositivo** (`@mood_log`, `@preferencias`) — el backend no tiene endpoint para eso.
-- **El chequeo dentro del chat no muestra botones de respuesta inventados** — el backend conduce la escala de forma conversacional (texto libre). Si se muestra progreso, viene de `diagnosticoService` (`progreso.registrados/total`).
+- ~~El chequeo no muestra botones~~ → **cambiado (usuario, 2026-10-13)**: preguntas cerradas e ítems del test con botones tipo encuesta (`opciones`), que mapean 1 a 1 a la escala; **el ítem 3 (ideación suicida) va sin botones** por seguridad. Siempre se puede escribir libre.
 - **Fuente Figtree vía `@expo-google-fonts/figtree`** y **SVG vía `react-native-svg`** — instalados con `npx expo install`.
 - **Contraseña mínima: 6 caracteres** (no 8 como el diseño) — coincide con `validation.isValidPassword` y Supabase.
 - **Cortes Hamilton de respaldo ≤7 / ≤13 / ≤18 / >18** — sólo si el backend devuelve un `nivel` no reconocido; el nivel del backend manda.
