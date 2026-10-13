@@ -39,3 +39,9 @@ Aquí nadie te juzga." + texto con `asistente.nombre`.
 
 ## Privacidad y términos (2026-10-12)
 - Enlaces/fila abren `Legal` (privacidad o términos). Ver [[Decisiones]].
+
+## Acciones siempre visibles (2026-10-12)
+- Problema reportado por el usuario en Expo Go (iPhone): "no salen los botones de iniciar sesión ni de registrarse". Causa: el CTA estaba al final de un scroll (con letra grande o pantalla baja quedaba fuera de vista), se veía gris/deshabilitado hasta marcar la casilla y "Iniciar sesión" era sólo texto en la esquina.
+- Ahora: contenido en `ScrollView` + **pie fijo** con casilla, **"Crear cuenta y empezar"** (si falta la casilla, explica "Marca la casilla…" en vez de quedar muerto) y **"Ya tengo cuenta · Iniciar sesión"** (botón secundario). Se mantiene el enlace de la cabecera.
+- Verificado en web 375×667: ambos botones visibles sin desplazar; el aviso de consentimiento aparece al tocar sin marcar.
+- Desviación del diseño: el diseño sólo tenía "Empezar a conversar" y el enlace superior.
