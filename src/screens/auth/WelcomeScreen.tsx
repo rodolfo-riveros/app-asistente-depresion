@@ -8,6 +8,9 @@ import { useLayout } from '../../hooks/useLayout';
 import type { RootScreenProps } from '../../navigation/types';
 import { AmanecerIlustracion, Checkbox, llamarAyuda } from './components/AuthBits';
 
+/** Cambia con cada arreglo para comprobar en el teléfono que llegó el código nuevo. */
+const VERSION_PRUEBA = 'botones-v3 (sin NativeWind)';
+
 const puntos: { icon: IconName; texto: string }[] = [
   { icon: 'lock', texto: 'Privado y cifrado. Tú decides qué se guarda.' },
   { icon: 'chat', texto: 'Escribe o habla por voz, como te sea más fácil.' },
@@ -185,6 +188,13 @@ export const WelcomeScreen: React.FC<RootScreenProps<'Bienvenida'>> = ({ navigat
             . Gratis, las 24 horas.
           </Txt>
         </Pressable>
+
+        {/* Sólo en desarrollo: confirma qué versión del código está cargando el teléfono. */}
+        {__DEV__ && (
+          <Txt size={11} color={colors.inkSoft} align="center">
+            versión de prueba · {VERSION_PRUEBA}
+          </Txt>
+        )}
       </View>
     </Screen>
   );
