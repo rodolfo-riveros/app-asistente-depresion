@@ -10,6 +10,7 @@ import { VozScreen } from '../screens/voz/VozScreen';
 import { ResultScreen } from '../screens/chat/ResultScreen';
 import { CrisisProtocolScreen } from '../screens/chat/CrisisProtocolScreen';
 import { ActividadesScreen } from '../screens/actividades/ActividadesScreen';
+import { LegalScreen } from '../screens/legal/LegalScreen';
 import { AppNavigator } from './AppNavigator';
 import { colors } from '../constants/colors';
 import type { RootStackParamList } from './types';
@@ -57,6 +58,8 @@ export const RootNavigator: React.FC = () => {
           <Stack.Screen name="Register" component={RegisterScreen} />
         </>
       )}
+      {/* Común a ambos estados: se lee antes de crear la cuenta y desde Perfil. */}
+      <Stack.Screen name="Legal" component={LegalScreen} />
     </Stack.Navigator>
   );
 };

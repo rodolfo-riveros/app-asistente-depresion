@@ -54,3 +54,6 @@
 - Filas "Privacidad y datos" y "Voz de …": onda Android (`colors.ripple`), opacidad sólo en iOS.
 - `Hoja`: centrada con `maxWidth 560` (tablets), entra deslizando, se cierra arrastrando el asa/cabecera hacia abajo (además de ×, velo y atrás), sin rebote del scroll.
 - `PermisoNotificaciones`: botones apilados en compacto con fuente > 115 %.
+
+## Privacidad y términos (2026-10-12)
+- Enlaces/fila abren `Legal` (privacidad o términos). Ver [[Decisiones]].

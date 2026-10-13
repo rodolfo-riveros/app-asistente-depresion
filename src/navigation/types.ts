@@ -27,6 +27,8 @@ export type RootStackParamList = {
   Actividades: undefined;
   Result: { resultado: HamiltonResult };
   CrisisProtocol: undefined;
+  /** Privacidad y términos; disponible con y sin sesión. */
+  Legal: { seccion?: 'privacidad' | 'terminos' } | undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

@@ -200,7 +200,7 @@ const FilaAjuste: React.FC<{
 
 /* ------------------------------------------------------------ Pantalla */
 
-export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = () => {
+export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { anchoContenido, compacto, escala, fontScale } = useLayout();
   const avatar = compacto ? 52 : escala(56);
@@ -391,18 +391,7 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = () => {
     );
   };
 
-  const verPrivacidad = () =>
-    Alert.alert(
-      'Privacidad y datos',
-      'En el servidor de la app (base de datos en Supabase) se guardan tu cuenta, tu perfil, ' +
-        `tus conversaciones con ${asistente.nombre}, los resultados de tus chequeos y las ` +
-        'actividades que acuerdas. Sólo tú, con tu sesión, puedes consultarlos.\n\n' +
-        'En este teléfono se guardan tu sesión, tu registro de ánimo, estas preferencias y tu ' +
-        'persona de confianza. Esto no se envía a ningún sitio.\n\n' +
-        'Puedes compartir tu ficha desde la pestaña Registro. Por ahora la app no permite ' +
-        'descargar ni borrar tus conversaciones desde aquí.',
-      [{ text: 'Entendido' }]
-    );
+  const verPrivacidad = () => navigation.navigate('Legal', { seccion: 'privacidad' });
 
   const confirmarLogout = () =>
     Alert.alert('Cerrar sesión', '¿Seguro que quieres salir de tu cuenta?', [

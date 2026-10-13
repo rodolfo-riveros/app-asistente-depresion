@@ -36,3 +36,6 @@ Aquí nadie te juzga." + texto con `asistente.nombre`.
 ## Adaptación Android/iOS (2026-10-12)
 - `useLayout()`: ilustración 96 px en pantallas bajas (< 700; 72 con fuente > 110 %), 140 en compacto, `escala(184)` en el resto (`AmanecerIlustracion` acepta `height`).
 - Compacto: padding 20, huecos 14, titular 28–30, IconTile 36 + texto 14, bloque final con gap 8 → en 375×667 cabe sin desplazar con la fuente normal; con fuente 130 % se desplaza.
+
+## Privacidad y términos (2026-10-12)
+- Enlaces/fila abren `Legal` (privacidad o términos). Ver [[Decisiones]].

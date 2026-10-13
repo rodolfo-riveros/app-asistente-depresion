@@ -90,11 +90,23 @@ export const WelcomeScreen: React.FC<RootScreenProps<'Bienvenida'>> = ({ navigat
           accessibilityLabel="Acepto los términos y la política de privacidad">
           <Txt size={13} color={colors.inkSoft}>
             Acepto los{' '}
-            <Txt size={13} weight="semibold" color={colors.forest}>
+            <Txt
+              size={13}
+              weight="semibold"
+              color={colors.forest}
+              accessibilityRole="link"
+              suppressHighlighting
+              onPress={() => navigation.navigate('Legal', { seccion: 'terminos' })}>
               términos
             </Txt>{' '}
             y la{' '}
-            <Txt size={13} weight="semibold" color={colors.forest}>
+            <Txt
+              size={13}
+              weight="semibold"
+              color={colors.forest}
+              accessibilityRole="link"
+              suppressHighlighting
+              onPress={() => navigation.navigate('Legal', { seccion: 'privacidad' })}>
               política de privacidad
             </Txt>
           </Txt>

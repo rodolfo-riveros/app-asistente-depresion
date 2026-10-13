@@ -32,7 +32,7 @@ Revisión para publicar (iniciada 2026-10-08, a pedido del usuario). El backend 
 - ~~Conectar backend real~~ ✅ (2026-10-12), ver [[Integración backend y adaptación]].
 - Nombre visible de la app en `app.json` sigue siendo "Aurora" (marca del diseño: "aliento") — decidir.
 - Probar en dispositivo: necesita `npx expo start -c` (Expo Go) o nuevo build EAS (se añadieron módulos nativos: keyboard-controller, system-ui, haptics).
-- **Términos y política de privacidad**: los enlaces de Bienvenida aún no tienen destino; hay que redactarlos y publicarlos (URL) antes de subir a las tiendas.
+- **Términos y privacidad**: ✅ pantalla en la app (2026-10-12). Falta: correo de contacto, revisión legal y URL pública para las tiendas.
 - **Probar primero en Android real:** barra del chat sobre el teclado (offset negativo), con navegación por gestos y con 3 botones.
 - ~~Hermes V1 (regresión en SDK 56)~~ → resuelto: el proyecto está en **Expo SDK 57 / RN 0.86.3** (2026-10-12), `expo-doctor` 21/21. Hay que probarlo en dispositivo.
 
