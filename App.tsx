@@ -23,8 +23,6 @@ import { useAuth } from './src/hooks/useAuth';
 import { recordatorio } from './src/services/recordatorio';
 import type { RootStackParamList } from './src/navigation/types';
 
-import './global.css';
-
 const navigationTheme: Theme = {
   ...DefaultTheme,
   dark: false,

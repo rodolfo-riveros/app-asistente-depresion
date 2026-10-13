@@ -40,5 +40,5 @@ Revisión para publicar (iniciada 2026-10-08, a pedido del usuario). El backend 
 - 5 agentes revisaron auth, chat, voz, inicio/actividades/perfil y registro/recursos/crisis (ver sección "Revisión producción" de cada nota en `pantallas/`).
 - `tsc` 0 errores, `eslint` 0 errores, `prettier` limpio, `expo install --check` al día, `expo-doctor` 21/22 (sólo Hermes).
 - Instalados `expo-font` y `expo-asset` como dependencias directas (sin ellos el APK podía fallar fuera de Expo Go). Quitados `expo-blur` y `expo-linear-gradient` (sin uso).
-- Web: arreglado error de NativeWind (`darkMode: 'class'`) y título de pestaña.
+- Web: título de pestaña. (NativeWind eliminado el 2026-10-12, ver [[Decisiones]].)
 - Verificado en web: Inicio y Perfil se ven como el diseño; estados sin conexión correctos.

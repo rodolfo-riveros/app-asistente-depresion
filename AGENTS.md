@@ -5,7 +5,7 @@
 ## Stack
 - React Native 0.86 + Expo SDK 57
 - React 19, TypeScript 6 (strict), `@/` → `./src/*`
-- NativeWind (Tailwind for RN) — prefer `className` over `StyleSheet.create`; StyleSheet acceptable for absolute fills and programmatic composite styles
+- Styling: plain style objects + tokens from `src/constants` (NO NativeWind/Tailwind: removed 2026-10-12 because its interop dropped `Pressable` style functions on iOS/Android → invisible buttons)
 - `@react-navigation` native-stack + bottom-tabs
 - `react-native-reanimated` 4.3 + `react-native-worklets` plugin
 - UI: `react-native-svg` (design icons/illustrations) + `@expo-google-fonts/figtree`
@@ -66,17 +66,16 @@ Visual source: `notas/diseño-fuente/*.html` (Claude Design export, 390×844). F
 - `src/constants/colors.ts` = single source of truth (background `#F3F4EF`, white surfaces, `sage #DDE6DC`, `forest #2F4A3E`, `ink #1F2A26`, `accent #E8A87C`, crisis `dangerBg`/`dangerInk`, voice mode `voiceBg #22302B`). NO hardcoded hex/rgba in components.
 - Figtree font via `src/constants/typography.ts`; use `<Txt weight>` — never bare `fontWeight` (Android doesn't switch font files).
 - Primitives in `src/components/ui/`: `Txt`, `Title`, `Icon` (SVG from the design), `Button`, `Card`, `TextField`, `Toggle`, `Screen`, `Logo`, `IconTile`, `IconButton`, `Chip`, `ProgressBar`, `HelpButton`, `Divider`.
+- Web preview ≠ native: verify Pressable/style changes with `npx expo export --platform ios` and on a device.
 - Flat surfaces, no shadow/blur/gradients. Radii: 22 cards, 18 list rows, 14–16 cells/inputs, full pills (`radius` in `spacing.ts`). Touch targets ≥ 44 px.
 - Adaptive layout: `hooks/useLayout` (compacto / bajo / tablet / escala); `Screen` centers content at 560 px on tablets; `Txt` caps system font scale (1.35, titles 1.2). Android ripples use `colors.ripple`/`rippleOnDark`.
 - Local-only data: `utils/animo.ts` (`@mood_log`, daily mood check-in) and `utils/preferencias.ts` (`@preferencias`).
 
 ## Conventions & gotchas
 - **ESLint**: flat config (`eslint.config.js`), NOT `.eslintrc`. Rule `react/display-name: off`.
-- **Babel**: preset order matters — `babel-preset-expo` before `nativewind/babel`. Plugin `react-native-worklets/plugin` required.
-- **Metro**: NativeWind configured with input CSS at `./global.css`.
+- **Babel**: `babel-preset-expo` + plugin `react-native-worklets/plugin` (required by Reanimated).
 - **Path aliases**: require TWO configs — `tsconfig.json` `paths` AND `app.json` `experiments.tsconfigPaths: true`.
-- **Prettier**: `singleQuote`, `bracketSameLine`, `trailingComma: 'es5'`, `printWidth: 100`, `prettier-plugin-tailwindcss`.
-- **Tailwind**: custom colors in `tailwind.config.js` mirror `src/constants/colors.ts`.
+- **Prettier**: `singleQuote`, `bracketSameLine`, `trailingComma: 'es5'`, `printWidth: 100`.
 - **AsyncStorage keys**: prefixed with `@` (`@auth_token`, `@user_data`, `@eval_history`, `@onboarded`).
 - **Git-ignored**: `node_modules/`, `.expo/`, `dist/`, `ios/`, `android/`, `web-build/`. `.env` is NOT gitignored.
 - **Package manager**: npm (`package-lock.json`).

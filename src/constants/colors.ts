@@ -3,7 +3,7 @@
  *
  * Fuente única de verdad de color: ningún componente debe escribir un hex
  * a mano. Los valores salen tal cual del diseño (`notas/diseño-fuente/`).
- * `tailwind.config.js` replica estas claves para usarlas con `className`.
+ * (La app no usa NativeWind/Tailwind: estilos con objetos y estos tokens.)
  */
 export const colors = {
   // Fondos y superficies
