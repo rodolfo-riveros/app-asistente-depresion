@@ -77,9 +77,13 @@ export const CrisisProtocolScreen: React.FC<RootScreenProps<'CrisisProtocol'>> =
   const centros = useMemo(() => {
     const base: (MentalHealthCenter & { km?: number })[] = CUSCO_HEALTH_CENTERS.map((c) => ({
       ...c,
-      km: ubicacion ? distanciaKm(ubicacion, c) : undefined,
+      km:
+        ubicacion && c.lat != null && c.lon != null
+          ? distanciaKm(ubicacion, { lat: c.lat, lon: c.lon })
+          : undefined,
     }));
-    return ubicacion ? base.sort((a, b) => (a.km ?? 0) - (b.km ?? 0)) : base;
+    // Los que no tienen coordenadas verificadas van al final, sin distancia.
+    return ubicacion ? base.sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity)) : base;
   }, [ubicacion]);
 
   const pedirUbicacion = useCallback(async () => {
@@ -281,15 +285,17 @@ export const CrisisProtocolScreen: React.FC<RootScreenProps<'CrisisProtocol'>> =
               {c.km !== undefined && <Fila icono="arrowRight" texto={`A ${formatoKm(c.km)}`} />}
             </View>
             <View style={{ flexDirection: fila, gap: 8 }}>
-              <Button
-                label={c.telefono}
-                icon="phone"
-                variant="outline"
-                size="sm"
-                grow={!apilar}
-                accessibilityHint={`Llama a ${c.nombre}`}
-                onPress={() => llamar(c.telefono)}
-              />
+              {c.telefono && (
+                <Button
+                  label={c.telefono as string}
+                  icon="phone"
+                  variant="outline"
+                  size="sm"
+                  grow={!apilar}
+                  accessibilityHint={`Llama a ${c.nombre}`}
+                  onPress={() => llamar(c.telefono as string)}
+                />
+              )}
               <Button
                 label="Cómo llegar"
                 icon="pin"

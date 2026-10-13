@@ -1,46 +1,54 @@
 import * as Location from 'expo-location';
 import { MentalHealthCenter } from '../types/chat';
 
+/**
+ * Centros de salud mental de Cusco.
+ *
+ * SÓLO datos con fuente oficial o institucional (revisados el 2026-10-12). Si un
+ * dato no se pudo verificar se deja en null: nunca inventar teléfonos ni
+ * coordenadas — en crisis, un número equivocado es peligroso. Revisar cada
+ * cierto tiempo (los teléfonos cambian) y confirmar llamando.
+ */
 export const CUSCO_HEALTH_CENTERS: MentalHealthCenter[] = [
   {
-    id: 'c1',
-    nombre: 'Centro de Salud Mental Comunitario Wanchaq',
-    direccion: 'Av. Perú K-10, Wanchaq, Cusco',
-    telefono: '084-245112',
-    distanciaKm: 1.2,
-    lat: -13.5226,
-    lon: -71.9616,
-    horario: 'Atención 24 Horas',
+    id: 'csmc-cusco',
+    nombre: 'Centro de Salud Mental Comunitario Cusco',
+    direccion: 'Calle Osvaldo Baca 211, Urb. Magisterio (cerca al Parque El Trébol), Wanchaq',
+    telefono: '991069763',
+    lat: null,
+    lon: null,
+    horario: 'Lunes a sábado, 7:00 a. m. – 7:00 p. m.',
+    fuente: 'Minsa · gob.pe/10942 (Centros de Salud Mental Comunitaria)',
   },
   {
-    id: 'c2',
-    nombre: 'Hospital Antonio Lorena de Cusco',
-    direccion: 'Plaza Belén s/n, Santiago, Cusco',
-    telefono: '084-226511',
-    distanciaKm: 2.5,
-    lat: -13.5251,
-    lon: -71.9845,
-    horario: 'Urgencias 24 Horas',
+    id: 'csmc-santiago',
+    nombre: 'Centro de Salud Mental Comunitario Santiago',
+    direccion: 'Calle Reverendo Padre Manya s/n (ex Terminal de Quillabamba), Santiago',
+    telefono: '084386029',
+    lat: null,
+    lon: null,
+    horario: 'Consultar horario por teléfono',
+    fuente: 'Directorio institucional (amlq.org.pe)',
   },
   {
-    id: 'c3',
+    id: 'hospital-regional',
     nombre: 'Hospital Regional del Cusco',
-    direccion: 'Av. de la Cultura 1420, Cusco',
-    telefono: '084-227661',
-    distanciaKm: 3.1,
-    lat: -13.523,
-    lon: -71.953,
-    horario: 'Emergencias 24/7',
+    direccion: 'Av. de la Cultura s/n, Wanchaq',
+    telefono: '084227661',
+    lat: null,
+    lon: null,
+    horario: 'Emergencias 24 horas',
+    fuente: 'gob.pe › Hospital Regional Cusco › Sedes',
   },
   {
-    id: 'c4',
-    nombre: 'CSMC San Jerónimo - Cusco',
-    direccion: 'Calle Clorinda Matto de Turner s/n, San Jerónimo',
-    telefono: '084-274090',
-    distanciaKm: 5.8,
-    lat: -13.541,
-    lon: -71.889,
-    horario: '8:00 AM - 8:00 PM',
+    id: 'hospital-lorena',
+    nombre: 'Hospital Antonio Lorena',
+    direccion: 'Calle Carlos Ugarte s/n, Urb. Primavera, Huancaro, Santiago',
+    telefono: '084224712',
+    lat: null,
+    lon: null,
+    horario: 'Emergencias 24 horas',
+    fuente: 'gob.pe › Hospital Antonio Lorena › Contacto (central telefónica)',
   },
 ];
 

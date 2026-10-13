@@ -96,20 +96,22 @@ export const CentrosSheet: React.FC<CentrosSheetProps> = ({ visible, centros, on
                 </Txt>
                 <Linea icon="pin" texto={c.direccion} />
                 <Linea icon="clock" texto={c.horario} />
-                <Pressable
-                  onPress={() => llamar(c.telefono)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Llamar a ${c.nombre}`}
-                  android_ripple={{ color: colors.ripple, foreground: true }}
-                  style={({ pressed }) => ({
-                    minHeight: 44,
-                    justifyContent: 'center',
-                    borderRadius: radius.sm,
-                    overflow: 'hidden',
-                    opacity: Platform.OS === 'ios' && pressed ? 0.7 : 1,
-                  })}>
-                  <Linea icon="phone" texto={c.telefono} color={colors.forest} />
-                </Pressable>
+                {c.telefono && (
+                  <Pressable
+                    onPress={() => llamar(c.telefono as string)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Llamar a ${c.nombre}`}
+                    android_ripple={{ color: colors.ripple, foreground: true }}
+                    style={({ pressed }) => ({
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      borderRadius: radius.sm,
+                      overflow: 'hidden',
+                      opacity: Platform.OS === 'ios' && pressed ? 0.7 : 1,
+                    })}>
+                    <Linea icon="phone" texto={c.telefono} color={colors.forest} />
+                  </Pressable>
+                )}
               </Card>
             ))}
           </ScrollView>

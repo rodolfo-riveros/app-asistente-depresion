@@ -59,10 +59,15 @@ export const llamar = async (numero: string) => {
 export const abrirMapa = async (lugar: {
   nombre: string;
   direccion: string;
-  lat: number;
-  lon: number;
+  lat: number | null;
+  lon: number | null;
 }) => {
-  const url = `https://www.google.com/maps/search/?api=1&query=${lugar.lat},${lugar.lon}`;
+  // Sin coordenadas verificadas se busca por nombre y dirección (más seguro que un punto inventado).
+  const consulta =
+    lugar.lat != null && lugar.lon != null
+      ? `${lugar.lat},${lugar.lon}`
+      : encodeURIComponent(`${lugar.nombre}, ${lugar.direccion}, Cusco, Perú`);
+  const url = `https://www.google.com/maps/search/?api=1&query=${consulta}`;
   try {
     await Linking.openURL(url);
   } catch {

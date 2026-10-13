@@ -63,9 +63,13 @@ export interface MentalHealthCenter {
   id: string;
   nombre: string;
   direccion: string;
-  telefono: string;
+  /** null = sin número verificado: la app no muestra el botón Llamar. */
+  telefono: string | null;
   distanciaKm?: number;
-  lat: number;
-  lon: number;
+  /** null = sin coordenadas verificadas: el mapa busca por nombre y dirección. */
+  lat: number | null;
+  lon: number | null;
   horario: string;
+  /** De dónde sale el dato (para revisarlo). */
+  fuente?: string;
 }
