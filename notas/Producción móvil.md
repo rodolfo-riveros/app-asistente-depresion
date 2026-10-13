@@ -42,3 +42,12 @@ Revisión para publicar (iniciada 2026-10-08, a pedido del usuario). El backend 
 - Instalados `expo-font` y `expo-asset` como dependencias directas (sin ellos el APK podía fallar fuera de Expo Go). Quitados `expo-blur` y `expo-linear-gradient` (sin uso).
 - Web: título de pestaña. (NativeWind eliminado el 2026-10-12, ver [[Decisiones]].)
 - Verificado en web: Inicio y Perfil se ven como el diseño; estados sin conexión correctos.
+
+## ¿Lista para usarse? (2026-10-12)
+- [x] Supabase nuevo con tablas y bucket (verificado).
+- [ ] **Render**: cambiar `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (hoy responde 500/503 porque apunta al proyecto borrado).
+- [ ] Supabase › Authentication › Email: desactivar "Confirm email" (no verificable desde la sesión).
+- [ ] iPhone/Expo Go: confirmar con foto que carga `botones-v3` y que se ven los botones.
+- [ ] Probar APK (`eas build -p android --profile preview`): registro, chat, voz, recordatorio.
+- [ ] Tiendas: correo de contacto + revisión legal + URL pública de privacidad; cuentas de desarrollador (Google Play pago único, Apple anual); capturas y ficha.
+- [ ] Opcional: Azure para voz en la nube.
