@@ -1,176 +1,130 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, Share, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SpatialContainer } from '../../components/SpatialContainer';
+import React, { useState } from 'react';
+import { Alert, Share, View } from 'react-native';
 import { ResultCard } from '../../components/ResultCard';
-import { AuthButton } from '../../components/AuthButton';
-import { Glass } from '../../components/Glass';
+import { Button, Card, IconButton, Screen, Title, Txt } from '../../components/ui';
 import { colors } from '../../constants/colors';
 import { asistente } from '../../constants/asistente';
-import { spacing } from '../../constants/spacing';
+import { SCORE_MAXIMO } from '../../services/diagnostico';
 import { useChat } from '../../hooks/useChat';
+import { useLayout } from '../../hooks/useLayout';
 import { storage } from '../../utils/storage';
+import type { RootScreenProps } from '../../navigation/types';
 
-const pressableBase = { flex: 1 };
-
-export const ResultScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
+export const ResultScreen: React.FC<RootScreenProps<'Result'>> = ({ navigation, route }) => {
   const { resetChat } = useChat();
+  const { anchoContenido, fontScale } = useLayout();
+  // Dos botones en fila sólo si caben (360 px o fuente al 130 % → apilados).
+  const apilar = anchoContenido / Math.min(Math.max(fontScale, 1), 1.35) < 380;
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
   const resultado = route.params?.resultado;
+
+  const volver = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('MainApp');
+  };
 
   if (!resultado) {
     return (
-      <SpatialContainer style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No hay un resultado disponible para mostrar.</Text>
-        <AuthButton label="Volver al Chat" onPress={() => navigation.navigate('ChatMain')} />
-      </SpatialContainer>
+      <Screen contentStyle={{ justifyContent: 'center' }}>
+        <Card gap={14}>
+          <Txt size={15} weight="semibold">
+            No hay un resultado para mostrar
+          </Txt>
+          <Txt size={14} color={colors.inkSoft} leading={1.4}>
+            Cuando {asistente.nombre} complete el chequeo contigo, aquí verás tu resumen.
+          </Txt>
+          <Button label="Volver" size="md" onPress={volver} />
+        </Card>
+      </Screen>
     );
   }
 
-  const handleShare = async () => {
+  const compartir = async () => {
     try {
-      const shareMessage = `Resumen de mi evaluación (${asistente.nombre}):\nNivel: ${resultado.nivel}\nPuntaje: ${resultado.score}/52\nFecha: ${new Date(resultado.fecha).toLocaleDateString()}\n\nInterpretación: ${resultado.interpretacion}`;
-      await Share.share({
-        message: shareMessage,
-        title: 'Resumen de mi evaluación',
-      });
-    } catch (e) {
-      console.error('Error sharing result:', e);
+      const mensaje =
+        `Resumen de mi evaluación (${asistente.nombre}):\n` +
+        `Nivel: ${resultado.nivel}\n` +
+        `Puntaje: ${resultado.score}/${SCORE_MAXIMO}\n` +
+        (resultado.fecha
+          ? `Fecha: ${new Date(resultado.fecha).toLocaleDateString('es-PE')}\n`
+          : '') +
+        (resultado.interpretacion ? `\nInterpretación: ${resultado.interpretacion}` : '');
+      await Share.share({ message: mensaje, title: 'Resumen de mi evaluación' });
+    } catch {
+      Alert.alert('No se pudo compartir', 'Inténtalo de nuevo en un momento.');
     }
   };
 
-  const handleSave = async () => {
-    await storage.saveEvaluation(resultado);
-    Alert.alert('Guardado', 'Tu evaluación ha sido guardada en tu historial local.');
+  const guardar = async () => {
+    if (guardado || guardando) return;
+    setGuardando(true);
+    try {
+      await storage.saveEvaluation(resultado);
+      setGuardado(true);
+      Alert.alert('Guardado', 'Tu evaluación se guardó en el historial de este dispositivo.');
+    } catch {
+      Alert.alert('No se pudo guardar', 'Inténtalo de nuevo en un momento.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  const handleRestart = () => {
+  const otraEvaluacion = () => {
     resetChat();
-    navigation.navigate('ChatMain');
+    navigation.navigate('Chat');
   };
 
   return (
-    <SpatialContainer>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Top Header */}
-        <View style={styles.header}>
-          <View style={styles.headerBadge}>
-            <Ionicons name="checkmark-circle-outline" size={13} color={colors.accent} />
-            <Text style={styles.headerBadgeText}> Conversación Completada</Text>
-          </View>
+    <Screen scroll edges={['top', 'left', 'right', 'bottom']}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: -10 }}>
+        <IconButton name="back" accessibilityLabel="Volver" onPress={volver} />
+      </View>
 
-          <Text style={styles.title}>Resumen de tu Conversación</Text>
-          <Text style={styles.subtitle}>
-            Gracias por compartir lo que sientes con {asistente.nombre}. Aquí hay un resumen de lo
-            conversado.
-          </Text>
+      <View style={{ gap: 6 }}>
+        <Title>Tu resultado</Title>
+        <Txt size={14} color={colors.inkSoft} leading={1.45}>
+          Gracias por compartir lo que sientes con {asistente.nombre}. Este es el resumen de lo que
+          conversaron.
+        </Txt>
+      </View>
+
+      <ResultCard resultado={resultado} />
+
+      <Card tone="sage" gap={12}>
+        <Txt size={15} weight="semibold" leading={1.35}>
+          Hablar con un psicólogo puede ayudarte a sentirte mejor
+        </Txt>
+        <View style={{ flexDirection: apilar ? 'column' : 'row', gap: 8 }}>
+          <Button
+            label="Ver especialistas"
+            size="sm"
+            grow={!apilar}
+            onPress={() => navigation.navigate('CrisisProtocol')}
+          />
+          <Button
+            label="Compartir"
+            size="sm"
+            variant="secondary"
+            icon="share"
+            grow={!apilar}
+            onPress={compartir}
+          />
         </View>
+      </Card>
 
-        {/* Detailed Result Card */}
-        <ResultCard resultado={resultado} />
-
-        {/* Interactive Action Buttons */}
-        <View style={styles.actionsContainer}>
-          <AuthButton label="Realizar otra evaluación" onPress={handleRestart} style={styles.cta} />
-
-          <View style={styles.secondaryRow}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [pressableBase, pressed && { opacity: 0.85 }]}
-              onPress={handleShare}>
-              <Glass level="low" contentStyle={styles.btnSecondaryContent}>
-                <Ionicons name="share-outline" size={16} color={colors.textPrimary} />
-                <Text style={styles.btnSecondaryText}> Compartir</Text>
-              </Glass>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [pressableBase, pressed && { opacity: 0.85 }]}
-              onPress={handleSave}>
-              <Glass level="low" contentStyle={styles.btnSecondaryContent}>
-                <Ionicons name="download-outline" size={16} color={colors.textPrimary} />
-                <Text style={styles.btnSecondaryText}> Guardar</Text>
-              </Glass>
-            </Pressable>
-          </View>
-        </View>
-      </ScrollView>
-    </SpatialContainer>
+      <View style={{ gap: 8 }}>
+        <Button label="Hacer otra evaluación" onPress={otraEvaluacion} />
+        <Button
+          label={guardado ? 'Guardado en este dispositivo' : 'Guardar en este dispositivo'}
+          variant="ghost"
+          size="md"
+          icon={guardado ? 'check' : undefined}
+          loading={guardando}
+          disabled={guardado}
+          onPress={guardar}
+        />
+      </View>
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    padding: spacing.screenPadding,
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accentLight,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    marginBottom: spacing.sm,
-  },
-  headerBadgeText: {
-    color: colors.accent,
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
-    paddingHorizontal: spacing.md,
-    lineHeight: 19,
-  },
-  actionsContainer: {
-    marginTop: spacing.xs,
-  },
-  cta: {
-    marginTop: 0,
-  },
-  secondaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  btnSecondaryContent: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 13,
-    gap: 6,
-  },
-  btnSecondaryText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-});

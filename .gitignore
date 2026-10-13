@@ -22,3 +22,7 @@ android
 .metro-health-check*
 .agents/
 .claude/
+
+# Obsidian: estado personal del editor (las notas en notas/ sí se versionan)
+.obsidian/workspace*.json
+.obsidian/cache

@@ -14,50 +14,80 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash.png",
-          "backgroundColor": "#101a2d"
+          "backgroundColor": "#F3F4EF",
+          "imageWidth": 200
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Permite a la aplicación acceder a tu ubicación para encontrar Centros de Salud Mental Comunitarios cercanos en Cusco durante una situación de apoyo."
+          "locationWhenInUsePermission": "Usamos tu ubicación solo cuando la pides, para mostrarte los centros de salud mental más cercanos."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Permite grabar tu voz para que puedas conversar hablando con el asistente en lugar de escribir."
+          "microphonePermission": "El micrófono se usa solo mientras hablas con la asistente, para convertir tu voz en texto."
         }
       ],
-      "expo-sharing"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite elegir una foto para tu perfil.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-sharing",
+      "expo-font",
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2F4A3E",
+          "defaultChannel": "recordatorio"
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ]
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#101a2d",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F3F4EF",
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para buscar centros de salud mental cercanos en Cusco."
-      }
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.rdo0711.aurora"
     },
     "android": {
       "package": "com.rdo0711.aurora",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#101a2d"
+        "backgroundColor": "#F3F4EF"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "RECORD_AUDIO",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "MODIFY_AUDIO_SETTINGS",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "softwareKeyboardLayoutMode": "resize",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]

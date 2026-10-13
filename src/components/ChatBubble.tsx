@@ -1,130 +1,53 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View } from 'react-native';
 import { ChatMessage } from '../types/chat';
 import { colors } from '../constants/colors';
-import { spacing } from '../constants/spacing';
-import { glassShadow, glassHighlightGradient } from '../constants/glass';
-import { formatters } from '../utils/formatters';
-import { AvatarAssistant } from './AvatarAssistant';
-import { Glass } from './Glass';
+import { asistente } from '../constants/asistente';
+import { Txt } from './ui';
 
 interface ChatBubbleProps {
   message: ChatMessage;
+  /**
+   * Ancho máximo en px. Lo calcula la pantalla (≈ 78 % del ancho de contenido,
+   * con techo en tablet). Sin él se usa el 78 % del contenedor.
+   */
+  anchoMaximo?: number;
 }
 
-export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
-  const isAssistant = message.role === 'assistant';
-
-  if (isAssistant) {
-    return (
-      <View style={styles.assistantRow}>
-        <AvatarAssistant size="sm" emotion={message.emotion || 'empathetic'} />
-        <View style={styles.assistantContainer}>
-          <Glass
-            level="base"
-            radius={spacing.borderRadiusLg}
-            radiusStyle={styles.assistantRadius}
-            contentStyle={styles.bubbleContent}>
-            <Text style={styles.assistantText}>{message.content}</Text>
-          </Glass>
-          <Text style={styles.timestampLeft}>{formatters.formatTime(message.timestamp)}</Text>
-        </View>
-      </View>
-    );
-  }
+/**
+ * Burbuja del chat (diseño Aliento).
+ * - Asistente: blanca, esquina inferior izquierda casi recta (18/18/18/6).
+ * - Usuario: verde bosque con texto claro, esquina inferior derecha recta (18/18/6/18).
+ * La hora no va en cada burbuja: la llevan los separadores de fecha.
+ */
+export const ChatBubble: React.FC<ChatBubbleProps> = React.memo(({ message, anchoMaximo }) => {
+  const esAsistente = message.role === 'assistant';
 
   return (
-    <View style={styles.userRow}>
-      <View style={styles.userContainer}>
-        <LinearGradient
-          colors={colors.userBgGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.userBubble}>
-          <LinearGradient
-            pointerEvents="none"
-            colors={glassHighlightGradient}
-            style={styles.userHighlight}
-          />
-          <Text style={styles.userText}>{message.content}</Text>
-        </LinearGradient>
-        <Text style={styles.timestampRight}>{formatters.formatTime(message.timestamp)}</Text>
-      </View>
+    <View
+      accessible
+      accessibilityLabel={`${esAsistente ? asistente.nombre : 'Tú'}: ${message.content}`}
+      style={{
+        alignSelf: esAsistente ? 'flex-start' : 'flex-end',
+        maxWidth: anchoMaximo ?? '78%',
+        backgroundColor: esAsistente ? colors.surface : colors.forest,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        borderBottomLeftRadius: esAsistente ? 6 : 18,
+        borderBottomRightRadius: esAsistente ? 18 : 6,
+      }}>
+      <Txt
+        size={15}
+        leading={1.45}
+        color={esAsistente ? colors.ink : colors.onDark}
+        // Android: corte de línea de calidad y guiones en palabras largas (enlaces, correos).
+        textBreakStrategy="highQuality"
+        android_hyphenationFrequency="normal"
+        selectable>
+        {message.content}
+      </Txt>
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  assistantRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginVertical: spacing.xs + 2,
-    marginRight: 40,
-  },
-  assistantContainer: {
-    marginLeft: spacing.sm,
-    flexShrink: 1,
-  },
-  assistantRadius: {
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: spacing.borderRadiusLg,
-    borderBottomLeftRadius: spacing.borderRadiusLg,
-    borderBottomRightRadius: spacing.borderRadiusLg,
-  },
-  bubbleContent: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
-  },
-  assistantText: {
-    color: colors.assistantText,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  userRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginVertical: spacing.xs + 2,
-    marginLeft: 40,
-  },
-  userContainer: {
-    alignItems: 'flex-end',
-    flexShrink: 1,
-  },
-  userBubble: {
-    borderTopLeftRadius: spacing.borderRadiusLg,
-    borderTopRightRadius: 6,
-    borderBottomLeftRadius: spacing.borderRadiusLg,
-    borderBottomRightRadius: spacing.borderRadiusLg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...glassShadow.low,
-  },
-  userHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  userText: {
-    color: colors.userText,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  timestampLeft: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 3,
-    marginLeft: 4,
-  },
-  timestampRight: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 3,
-    marginRight: 4,
-  },
 });

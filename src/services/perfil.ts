@@ -26,19 +26,36 @@ export const perfilService = {
     return api.request<Perfil>('get', '/perfil', undefined, 'No se pudo cargar tu perfil.');
   },
 
+  /**
+   * `PUT /perfil`. Sólo viajan las claves presentes en `cambios`; una clave
+   * presente con `undefined`, `null` o `''` significa "vaciar el dato" y se
+   * manda como `null` (el backend lo borra; el nombre nunca se borra).
+   */
   async guardar(cambios: Partial<PerfilEditable>): Promise<Perfil> {
-    return api.request<Perfil>('put', '/perfil', cambios, 'No se pudo guardar tu perfil.');
+    const cuerpo = Object.fromEntries(
+      Object.entries(cambios).map(([clave, valor]) => [
+        clave,
+        valor === undefined || valor === '' ? null : valor,
+      ])
+    );
+    return api.request<Perfil>('put', '/perfil', cuerpo, 'No se pudo guardar tu perfil.');
   },
 
-  /** Sube la foto de perfil. `uri` viene del selector de imágenes. */
+  /**
+   * Sube la foto de perfil (`POST /perfil/foto`, campo multipart `foto`; el
+   * backend acepta JPG, PNG o WEBP de hasta 5 MB). `uri` viene del selector.
+   */
   async subirFoto(uri: string): Promise<Perfil> {
     const form = new FormData();
-    const extension = uri.split('.').pop()?.toLowerCase() === 'png' ? 'png' : 'jpg';
-    const tipo = extension === 'png' ? 'image/png' : 'image/jpeg';
+    const sufijo = uri.split('?')[0].split('.').pop()?.toLowerCase();
+    const extension = sufijo === 'png' ? 'png' : sufijo === 'webp' ? 'webp' : 'jpg';
+    const tipo = extension === 'jpg' ? 'image/jpeg' : `image/${extension}`;
 
     if (Platform.OS === 'web') {
+      // En web la uri es un blob:/data: sin extensión: manda el tipo real del archivo.
       const blob = await (await fetch(uri)).blob();
-      form.append('foto', blob, `perfil.${extension}`);
+      const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+      form.append('foto', blob, `perfil.${ext}`);
     } else {
       form.append('foto', {
         uri,

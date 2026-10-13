@@ -1,184 +1,265 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, Pressable, ScrollView, Alert } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { SpatialContainer } from '../../components/SpatialContainer';
-import { GlassCard } from '../../components/GlassCard';
-import { AuthInput } from '../../components/AuthInput';
-import { AuthButton } from '../../components/AuthButton';
+import React, { useEffect, useRef, useState } from 'react';
+import { Keyboard, TextInput, View } from 'react-native';
+import {
+  Button,
+  Card,
+  IconButton,
+  Screen,
+  TextField,
+  Title,
+  Toggle,
+  Txt,
+} from '../../components/ui';
 import { colors } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
+import { radius, spacing } from '../../constants/spacing';
+import { asistente } from '../../constants/asistente';
 import { useAuth } from '../../hooks/useAuth';
+import { useLayout } from '../../hooks/useLayout';
 import { validation } from '../../utils/validation';
+import { preferencias } from '../../utils/preferencias';
+import { recordatorio as recordatorioService } from '../../services/recordatorio';
+import type { RootScreenProps } from '../../navigation/types';
+import { AvisoDespertando } from '../../components/AvisoDespertando';
+import {
+  EnlacePie,
+  ErrorApi,
+  MedidorContrasena,
+  PASSWORD_MIN,
+  vibrarError,
+} from './components/AuthBits';
 
-export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+type Errores = { nombre?: string; email?: string; password?: string };
+
+/** Barra de pasos "1 de 2" de la cabecera. */
+const Pasos: React.FC<{ actual: number; total: number }> = ({ actual, total }) => (
+  <View
+    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+    accessible
+    accessibilityLabel={`Paso ${actual} de ${total}`}>
+    <View style={{ flex: 1, flexDirection: 'row', gap: 6 }}>
+      {Array.from({ length: total }, (_, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: i < actual ? colors.forest : colors.border,
+          }}
+        />
+      ))}
+    </View>
+    <Txt size={12.5} color={colors.inkSoft}>
+      {actual} de {total}
+    </Txt>
+  </View>
+);
+
+/** Pantalla 7 · Crear cuenta. */
+export const RegisterScreen: React.FC<RootScreenProps<'Register'>> = ({ navigation }) => {
   const { register } = useAuth();
+  const { compacto } = useLayout();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [recordatorio, setRecordatorio] = useState(true);
+  const [errores, setErrores] = useState<Errores>({});
+  const [errorApi, setErrorApi] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const nombreRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passRef = useRef<TextInput>(null);
+  // Candado síncrono contra doble envío (doble toque o Enter + botón).
+  const enviando = useRef(false);
 
-  const handleRegister = async () => {
-    if (!nombre.trim()) {
-      Alert.alert('Nombre requerido', 'Por favor ingresa tu nombre completo.');
-      return;
-    }
-    if (!validation.isValidEmail(email)) {
-      Alert.alert('Email inválido', 'Ingresa un correo electrónico válido.');
-      return;
-    }
-    if (!validation.isValidPassword(password)) {
-      Alert.alert('Contraseña corta', 'La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-    if (!validation.doPasswordsMatch(password, confirmPassword)) {
-      Alert.alert('Contraseñas no coinciden', 'Las contraseñas ingresadas no coinciden.');
-      return;
-    }
+  useEffect(() => {
+    let vivo = true;
+    preferencias.obtener().then((p) => {
+      if (vivo) setRecordatorio(p.recordatorioDiario);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
+  const cambiarRecordatorio = (v: boolean) => {
+    setRecordatorio(v);
+    preferencias.guardar({ recordatorioDiario: v }).catch(() => {});
+  };
+
+  const limpiar = (campo: keyof Errores) => {
+    if (errores[campo]) setErrores((e) => ({ ...e, [campo]: undefined }));
+  };
+
+  const validar = () => {
+    const next: Errores = {};
+    if (!nombre.trim()) next.nombre = `Dinos cómo quieres que ${asistente.nombre} te llame`;
+    if (!email.trim()) next.email = 'Escribe tu correo';
+    else if (!validation.isValidEmail(email)) next.email = 'Ese correo no parece válido';
+    if (!validation.isValidPassword(password))
+      next.password = `Usa al menos ${PASSWORD_MIN} caracteres`;
+    setErrores(next);
+    if (next.nombre) nombreRef.current?.focus();
+    else if (next.email) emailRef.current?.focus();
+    else if (next.password) passRef.current?.focus();
+    return !next.nombre && !next.email && !next.password;
+  };
+
+  const crear = async () => {
+    if (enviando.current) return;
+    setErrorApi(null);
+    if (!validar()) {
+      vibrarError();
+      return;
+    }
+    enviando.current = true;
     setLoading(true);
+    Keyboard.dismiss();
     try {
-      await register({
-        nombre,
-        email,
-        password,
-      });
-    } catch (err: any) {
-      Alert.alert('Error de registro', err.message || 'No se pudo completar el registro.');
+      await preferencias.guardar({ recordatorioDiario: recordatorio }).catch(() => {});
+      await register({ nombre: nombre.trim(), email: email.trim(), password });
+      // La tarjeta "Recordatorio diario" ya explicó el motivo: con el toggle
+      // activo se pide directamente el permiso del sistema y se programa.
+      // Sin `await`: la app ya entra mientras sale el diálogo.
+      if (recordatorio) {
+        recordatorioService.pedirPermiso().then(() => recordatorioService.sincronizar());
+      }
+    } catch (err) {
+      vibrarError();
+      setErrorApi(
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos crear tu cuenta. Inténtalo de nuevo en un momento.'
+      );
     } finally {
+      enviando.current = false;
       setLoading(false);
     }
   };
 
+  const volver = () =>
+    navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Bienvenida');
+
   return (
-    <SpatialContainer>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <Animated.View
-          entering={FadeInDown.duration(700).springify().damping(15)}
-          style={styles.header}>
-          <Text style={styles.title}>Crear una Cuenta</Text>
-          <Text style={styles.subtitle}>
-            Regístrate para tener un espacio seguro donde conversar
-          </Text>
-        </Animated.View>
+    <Screen
+      scroll
+      keyboard
+      padding={spacing.screenForm}
+      gap={compacto ? 16 : 20}
+      edges={['top', 'left', 'right', 'bottom']}
+      contentStyle={{ paddingTop: compacto ? 8 : 16, paddingBottom: compacto ? 16 : 28 }}>
+      {/* Cabecera: volver + pasos */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <IconButton
+          name="back"
+          accessibilityLabel="Volver"
+          onPress={volver}
+          style={{ marginLeft: -10 }}
+        />
+        <Pasos actual={1} total={2} />
+      </View>
 
-        <Animated.View entering={FadeInUp.duration(600).delay(200).springify().damping(16)}>
-          <GlassCard level="low" style={styles.formCard} contentStyle={styles.formCardContent}>
-            <Animated.View entering={FadeInUp.duration(400).delay(300)}>
-              <AuthInput
-                label="Nombre Completo"
-                placeholder="María Quispe"
-                value={nombre}
-                onChangeText={setNombre}
-              />
-            </Animated.View>
+      <View style={{ gap: 8 }}>
+        <Title size={compacto ? 27 : 30} tracking={-0.6} leading={1.1}>
+          Crea tu espacio
+        </Title>
+        <Txt size={15} leading={1.45} color={colors.inkSoft}>
+          No necesitas tu nombre real. Solo cómo quieres que {asistente.nombre} te llame.
+        </Txt>
+      </View>
 
-            <Animated.View entering={FadeInUp.duration(400).delay(360)}>
-              <AuthInput
-                label="Correo Electrónico"
-                placeholder="maria@ejemplo.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-              />
-            </Animated.View>
+      <View style={{ gap: 14 }}>
+        <TextField
+          ref={nombreRef}
+          label="¿Cómo te llamo?"
+          placeholder="Un apodo o tu nombre"
+          value={nombre}
+          onChangeText={(t) => {
+            setNombre(t);
+            limpiar('nombre');
+          }}
+          error={errores.nombre}
+          autoCapitalize="words"
+          autoCorrect={false}
+          autoComplete="nickname"
+          textContentType="nickname"
+          maxLength={40}
+          returnKeyType="next"
+          onSubmitEditing={() => emailRef.current?.focus()}
+          submitBehavior="submit"
+        />
+        <TextField
+          ref={emailRef}
+          label="Correo"
+          placeholder="tucorreo@ejemplo.com"
+          value={email}
+          onChangeText={(t) => {
+            setEmail(t);
+            limpiar('email');
+          }}
+          error={errores.email}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => passRef.current?.focus()}
+          submitBehavior="submit"
+        />
+        <View style={{ gap: 6 }}>
+          <TextField
+            ref={passRef}
+            label="Contraseña"
+            password
+            value={password}
+            onChangeText={(t) => {
+              setPassword(t);
+              limpiar('password');
+            }}
+            error={errores.password}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="go"
+            onSubmitEditing={crear}
+            submitBehavior="blurAndSubmit"
+          />
+          <MedidorContrasena password={password} />
+        </View>
+      </View>
 
-            <Animated.View entering={FadeInUp.duration(400).delay(420)}>
-              <AuthInput
-                label="Contraseña"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                showToggle
-              />
-            </Animated.View>
+      <Card
+        rounded={radius.lg}
+        padding={14}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Txt size={14} weight="semibold">
+            Recordatorio diario
+          </Txt>
+          <Txt size={12.5} color={colors.inkSoft}>
+            {asistente.nombre} te pregunta cómo estás cada noche
+          </Txt>
+        </View>
+        <Toggle
+          value={recordatorio}
+          onChange={cambiarRecordatorio}
+          accessibilityLabel="Recordatorio diario"
+        />
+      </Card>
 
-            <Animated.View entering={FadeInUp.duration(400).delay(480)}>
-              <AuthInput
-                label="Confirmar Contraseña"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                showToggle
-              />
-            </Animated.View>
+      <ErrorApi mensaje={errorApi} />
 
-            <Animated.View entering={FadeInUp.duration(400).delay(550)}>
-              <AuthButton
-                label="Crear Cuenta"
-                loading={loading}
-                onPress={handleRegister}
-                style={styles.submitBtn}
-              />
-            </Animated.View>
-          </GlassCard>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(500).delay(700).springify()}>
-          <Pressable
-            style={({ pressed }) => [styles.loginLink, pressed && { opacity: 0.7 }]}
-            onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginLinkText}>
-              ¿Ya tienes una cuenta? <Text style={styles.loginHighlight}>Inicia Sesión</Text>
-            </Text>
-          </Pressable>
-        </Animated.View>
-      </ScrollView>
-    </SpatialContainer>
+      <View style={{ marginTop: 'auto', gap: 12 }}>
+        <Button label="Crear cuenta" loading={loading} onPress={crear} />
+        <AvisoDespertando activo={loading} />
+        <EnlacePie
+          pregunta="¿Ya tienes cuenta?"
+          accion="Inicia sesión"
+          onPress={() => navigation.popTo('Login')}
+        />
+      </View>
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    padding: spacing.screenPadding,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    marginTop: spacing.md,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  formCard: {
-    width: '100%',
-  },
-  formCardContent: {
-    padding: 20,
-    gap: 10,
-  },
-  submitBtn: {
-    marginTop: 0,
-  },
-  loginLink: {
-    width: '100%',
-    marginTop: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loginLinkText: {
-    width: '100%',
-    textAlign: 'center',
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  loginHighlight: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-});

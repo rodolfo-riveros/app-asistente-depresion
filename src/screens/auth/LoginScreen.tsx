@@ -1,207 +1,150 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, ScrollView, Pressable, Alert } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
-import { SpatialContainer } from '../../components/SpatialContainer';
-import { GlassCard } from '../../components/GlassCard';
-import { AvatarAssistant } from '../../components/AvatarAssistant';
-import { AuthInput } from '../../components/AuthInput';
-import { AuthButton } from '../../components/AuthButton';
+import React, { useRef, useState } from 'react';
+import { Keyboard, TextInput, View } from 'react-native';
+import { Button, IconButton, LogoMark, Screen, TextField, Title, Txt } from '../../components/ui';
 import { colors } from '../../constants/colors';
-import { asistente } from '../../constants/asistente';
 import { spacing } from '../../constants/spacing';
+import { asistente } from '../../constants/asistente';
 import { useAuth } from '../../hooks/useAuth';
+import { useLayout } from '../../hooks/useLayout';
 import { validation } from '../../utils/validation';
+import type { RootScreenProps } from '../../navigation/types';
+import { AvisoDespertando } from '../../components/AvisoDespertando';
+import { EnlacePie, ErrorApi, PASSWORD_MIN, vibrarError } from './components/AuthBits';
 
-export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+type Errores = { email?: string; password?: string };
+
+/** Pantalla 6 · Login. */
+export const LoginScreen: React.FC<RootScreenProps<'Login'>> = ({ navigation }) => {
   const { login } = useAuth();
+  const { compacto } = useLayout();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errores, setErrores] = useState<Errores>({});
+  const [errorApi, setErrorApi] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const emailRef = useRef<TextInput>(null);
+  const passRef = useRef<TextInput>(null);
+  // Candado síncrono: un doble toque o el Enter del teclado no envían dos veces
+  // aunque `loading` aún no se haya renderizado.
+  const enviando = useRef(false);
 
-  const pulse = useSharedValue(1);
-
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(withTiming(1.03, { duration: 2000 }), withTiming(1, { duration: 2000 })),
-      -1
-    );
-  }, []);
-
-  const avatarStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-  }));
-
-  const validate = () => {
-    const next: Record<string, string> = {};
-    if (!email.trim()) {
-      next.email = 'El correo electrónico es obligatorio';
-    } else if (!validation.isValidEmail(email)) {
-      next.email = 'Ingresa un correo electrónico válido';
-    }
-    if (!password.trim()) {
-      next.password = 'La contraseña es obligatoria';
-    } else if (!validation.isValidPassword(password)) {
-      next.password = 'La contraseña debe tener al menos 6 caracteres';
-    }
-    setErrors(next);
-    return Object.keys(next).length === 0;
+  const validar = () => {
+    const next: Errores = {};
+    if (!email.trim()) next.email = 'Escribe tu correo';
+    else if (!validation.isValidEmail(email)) next.email = 'Ese correo no parece válido';
+    if (!password) next.password = 'Escribe tu contraseña';
+    else if (!validation.isValidPassword(password))
+      next.password = `La contraseña tiene al menos ${PASSWORD_MIN} caracteres`;
+    setErrores(next);
+    if (next.email) emailRef.current?.focus();
+    else if (next.password) passRef.current?.focus();
+    return !next.email && !next.password;
   };
 
-  const handleLogin = async () => {
-    if (!validate()) return;
-
+  const entrar = async () => {
+    if (enviando.current) return;
+    setErrorApi(null);
+    if (!validar()) {
+      vibrarError();
+      return;
+    }
+    enviando.current = true;
     setLoading(true);
+    Keyboard.dismiss();
     try {
-      await login({ email, password });
-    } catch (err: any) {
-      Alert.alert('Error de acceso', err.message || 'Email o contraseña incorrectos.');
+      await login({ email: email.trim(), password });
+    } catch (err) {
+      vibrarError();
+      setErrorApi(
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos iniciar sesión. Revisa tu correo y contraseña.'
+      );
     } finally {
+      enviando.current = false;
       setLoading(false);
     }
   };
 
+  const volver = () =>
+    navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Bienvenida');
+
   return (
-    <SpatialContainer>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <Animated.View
-          entering={FadeInDown.duration(700).springify().damping(15)}
-          style={styles.header}>
-          <Animated.View style={avatarStyle}>
-            <AvatarAssistant size="lg" emotion="inspiring" />
-          </Animated.View>
-          <Text style={styles.appName}>{asistente.nombre}</Text>
-          <Text style={styles.tagline}>Tu acompañante para el bienestar mental</Text>
-        </Animated.View>
+    <Screen
+      scroll
+      keyboard
+      padding={spacing.screenForm}
+      gap={compacto ? 16 : 22}
+      edges={['top', 'left', 'right', 'bottom']}
+      contentStyle={{ paddingTop: compacto ? 8 : 16, paddingBottom: compacto ? 16 : 28 }}>
+      <IconButton
+        name="back"
+        accessibilityLabel="Volver"
+        onPress={volver}
+        style={{ marginLeft: -10 }}
+      />
 
-        <Animated.View entering={FadeInUp.duration(600).delay(200).springify().damping(16)}>
-          <GlassCard level="low" style={styles.formCard} contentStyle={styles.formCardContent}>
-            <Animated.View entering={FadeInDown.duration(400).delay(300)}>
-              <Text style={styles.formTitle}>Iniciar Sesión</Text>
-            </Animated.View>
+      <View style={{ gap: compacto ? 10 : 14 }}>
+        <LogoMark size={compacto ? 40 : 48} />
+        <Title size={compacto ? 27 : 30} tracking={-0.6} leading={1.1}>
+          {'Qué bueno\nverte de nuevo'}
+        </Title>
+        <Txt size={15} leading={1.45} color={colors.inkSoft}>
+          {asistente.nombre} recuerda dónde se quedaron. Entra para continuar.
+        </Txt>
+      </View>
 
-            <Animated.View entering={FadeInUp.duration(400).delay(350)}>
-              <AuthInput
-                label="Correo Electrónico"
-                placeholder="maria@ejemplo.com"
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setErrors((prev) => ({ ...prev, email: '' }));
-                }}
-                keyboardType="email-address"
-                error={errors.email}
-              />
-            </Animated.View>
+      <View style={{ gap: 14 }}>
+        <TextField
+          ref={emailRef}
+          label="Correo"
+          placeholder="tucorreo@ejemplo.com"
+          value={email}
+          onChangeText={(t) => {
+            setEmail(t);
+            if (errores.email) setErrores((e) => ({ ...e, email: undefined }));
+          }}
+          error={errores.email}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => passRef.current?.focus()}
+          submitBehavior="submit"
+        />
+        <TextField
+          ref={passRef}
+          label="Contraseña"
+          password
+          value={password}
+          onChangeText={(t) => {
+            setPassword(t);
+            if (errores.password) setErrores((e) => ({ ...e, password: undefined }));
+          }}
+          error={errores.password}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={entrar}
+          submitBehavior="blurAndSubmit"
+        />
+        <ErrorApi mensaje={errorApi} />
+      </View>
 
-            <Animated.View entering={FadeInUp.duration(400).delay(420)}>
-              <AuthInput
-                label="Contraseña"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  setErrors((prev) => ({ ...prev, password: '' }));
-                }}
-                secureTextEntry
-                showToggle
-                error={errors.password}
-                onSubmitEditing={handleLogin}
-              />
-            </Animated.View>
+      <Button label="Entrar" loading={loading} onPress={entrar} />
+      <AvisoDespertando activo={loading} />
 
-            <Animated.View entering={FadeInUp.duration(400).delay(500)}>
-              <AuthButton
-                label="Ingresar"
-                loading={loading}
-                onPress={handleLogin}
-                style={styles.loginBtn}
-              />
-            </Animated.View>
-          </GlassCard>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(500).delay(650).springify()}>
-          <Pressable
-            style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
-            onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.linkText}>
-              ¿No tienes cuenta? <Text style={styles.linkHighlight}>Regístrate</Text>
-            </Text>
-          </Pressable>
-        </Animated.View>
-      </ScrollView>
-    </SpatialContainer>
+      <View style={{ marginTop: 'auto' }}>
+        <EnlacePie
+          pregunta="¿Aún no tienes cuenta?"
+          accion="Crear una"
+          onPress={() => navigation.popTo('Register')}
+        />
+      </View>
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.xxl,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  appName: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-  },
-  tagline: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    lineHeight: 20,
-    maxWidth: 280,
-  },
-  formCard: {
-    width: '100%',
-  },
-  formCardContent: {
-    padding: 20,
-    gap: 10,
-  },
-  loginBtn: {
-    marginTop: 0,
-  },
-  linkRow: {
-    width: '100%',
-    marginTop: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linkText: {
-    width: '100%',
-    textAlign: 'center',
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  linkHighlight: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-});

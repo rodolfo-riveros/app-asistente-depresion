@@ -1,49 +1,23 @@
 import React from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
-import { SpatialContainer } from '../../components/SpatialContainer';
+import { ActivityIndicator, View } from 'react-native';
+import { LogoMark, Screen, Txt } from '../../components/ui';
 import { colors } from '../../constants/colors';
-import { asistente } from '../../constants/asistente';
-import { spacing } from '../../constants/spacing';
-import { AvatarAssistant } from '../../components/AvatarAssistant';
+import { app } from '../../constants/asistente';
 
-export const SplashScreen: React.FC = () => {
-  return (
-    <SpatialContainer style={styles.container}>
-      <View style={styles.content}>
-        <AvatarAssistant size="lg" emotion="inspiring" />
-        <Text style={styles.title}>{asistente.nombre}</Text>
-        <Text style={styles.subtitle}>
-          Tu espacio confidencial de acompañamiento y bienestar emocional
-        </Text>
-        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-      </View>
-    </SpatialContainer>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 20,
-  },
-  loader: {
-    marginTop: spacing.xxl,
-  },
-});
+/** Carga inicial (restaurando sesión): fondo crema, isotipo y marca. */
+export const SplashScreen: React.FC = () => (
+  <Screen
+    edges={['top', 'left', 'right', 'bottom']}
+    contentStyle={{ alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{ alignItems: 'center', gap: 16 }}
+      accessible
+      accessibilityLabel={`${app.nombre}, cargando`}>
+      <LogoMark size={72} />
+      <Txt size={30} weight="bold" tracking={-0.6}>
+        {app.nombre}
+      </Txt>
+      <ActivityIndicator color={colors.forest} style={{ marginTop: 16 }} />
+    </View>
+  </Screen>
+);

@@ -1,0 +1,103 @@
+<x-dc>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F3F4EF; font-family: 'Figtree', system-ui, sans-serif; color: #1F2A26; overflow: hidden">
+
+  <div style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 24px 20px 12px; display: flex; flex-direction: column; gap: 14px">
+
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.6px">Perfil</h1>
+
+    <div style="background: #FFFFFF; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 14px">
+        <div style="width: 56px; height: 56px; border-radius: 28px; background: {{accent}}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; flex-shrink: 0">A</div>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+          <span style="font-size: 17px; font-weight: 700">[Tu apodo]</span>
+          <span style="font-size: 13px; color: #4C5853">Con Alma desde septiembre</span>
+        </div>
+        <a href="#" style="font-size: 13.5px; font-weight: 600; padding: 12px 4px">Editar</a>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <div style="background: #F3F4EF; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 20px; font-weight: 700">12</span>
+          <span style="font-size: 11.5px; color: #4C5853">conversaciones</span>
+        </div>
+        <div style="background: #F3F4EF; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 20px; font-weight: 700">4 días</span>
+          <span style="font-size: 11.5px; color: #4C5853">seguidos</span>
+        </div>
+        <div style="background: #F3F4EF; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 20px; font-weight: 700">2</span>
+          <span style="font-size: 11.5px; color: #4C5853">chequeos</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #DDE6DC; border-radius: 22px; padding: 16px; display: flex; align-items: center; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1">
+        <span style="font-size: 15px; font-weight: 600">Persona de confianza</span>
+        <span style="font-size: 13px; line-height: 1.35; color: #3D4944">Alguien a quien puedas avisar con un toque si lo necesitas.</span>
+      </div>
+      <button style="height: 44px; padding: 0 16px; border-radius: 22px; border: 0; background: #1F2A26; color: #F3F4EF; font-family: inherit; font-size: 14px; font-weight: 600; flex-shrink: 0">Añadir</button>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 22px; padding: 4px 16px; display: flex; flex-direction: column">
+      <sc-for list="{{toggles}}" as="t" hint-placeholder-count="3">
+        <div style="min-height: 60px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #EDEFE9">
+          <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+            <span style="font-size: 14.5px; font-weight: 600">{{t.t}}</span>
+            <span style="font-size: 12.5px; color: #4C5853">{{t.m}}</span>
+          </div>
+          <button sc-camel-on-click="{{t.toggle}}" aria-pressed="{{t.pressed}}" aria-label="{{t.t}}" style="{{t.track}}">
+            <span style="width: 26px; height: 26px; border-radius: 13px; background: #FFFFFF"></span>
+          </button>
+        </div>
+      </sc-for>
+      <a href="#" style="min-height: 60px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #1F2A26">
+        <span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+          <span style="font-size: 14.5px; font-weight: 600">Privacidad y datos</span>
+          <span style="font-size: 12.5px; color: #4C5853">Descarga o borra tus conversaciones</span>
+        </span>
+        <svg width="18" height="18" fill="none" stroke="#1F2A26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+      </a>
+    </div>
+
+    <a href="Login.dc.html" style="height: 48px; border-radius: 24px; border: 1px solid #D5DBD2; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 600; text-decoration: none; color: #1F2A26">Cerrar sesión</a>
+  </div>
+
+  <nav style="flex-shrink: 0; height: 76px; box-sizing: border-box; padding: 6px 12px 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid #E1E4DC">
+    <a href="Inicio.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #4C5853; font-size: 11.5px">
+      <svg width="22" height="22" fill="none" stroke="#4C5853" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Inicio</a>
+    <a href="Registro.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #4C5853; font-size: 11.5px">
+      <svg width="22" height="22" fill="none" stroke="#4C5853" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Registro</a>
+    <a href="Recursos.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #4C5853; font-size: 11.5px">
+      <svg width="22" height="22" fill="none" stroke="#4C5853" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M4 21V5"></path></svg>Recursos</a>
+    <a href="Perfil.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #1F2A26; font-size: 11.5px; font-weight: 700">
+      <svg width="22" height="22" fill="none" stroke="#1F2A26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Perfil</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E8A87C&quot;,&quot;options&quot;:[&quot;#E8A87C&quot;,&quot;#C9B6E4&quot;,&quot;#F2C879&quot;]},&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { on: [true, true, false] };
+}
+renderVals() {
+const defs = [
+{ t: 'Recordatorio diario', m: 'Cada noche a las 21:00' },
+{ t: 'Bloqueo con huella', m: 'Nadie más abre tus chats' },
+{ t: 'Notificaciones discretas', m: 'Sin texto en la pantalla bloqueada' }
+];
+const on = this.state.on;
+return {
+accent: this.props.accent ?? '#E8A87C',
+toggles: defs.map((d, i) => ({
+t: d.t,
+m: d.m,
+pressed: on[i] ? 'true' : 'false',
+toggle: () => { const n = on.slice(); n[i] = !n[i]; this.setState({ on: n }); },
+track: 'width: 52px; height: 32px; flex-shrink: 0; border-radius: 16px; border: 0; padding: 3px; display: flex; cursor: pointer; justify-content: ' + (on[i] ? 'flex-end' : 'flex-start') + '; background: ' + (on[i] ? '#2F4A3E' : '#C9D0C6') + ';'
+}))
+};
+}
+}
+</script>

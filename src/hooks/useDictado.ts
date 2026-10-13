@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   RecordingPresets,
+  getRecordingPermissionsAsync,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
   useAudioRecorder,
@@ -33,8 +34,12 @@ export const useDictado = () => {
   const preparadaRef = useRef(false);
   const inicioRef = useRef(0);
 
+  // Las pantallas explican el permiso antes (usePermisoMicrofono + PermisoMicrofono).
+  // Aquí sólo se consulta; el diálogo del sistema sale únicamente si aún se puede preguntar.
   const asegurarPermiso = useCallback(async (): Promise<boolean> => {
-    const permiso = await requestRecordingPermissionsAsync();
+    const actual = await getRecordingPermissionsAsync();
+    if (actual.granted) return true;
+    const permiso = actual.canAskAgain ? await requestRecordingPermissionsAsync() : actual;
     if (!permiso.granted) {
       setError('Necesito permiso para usar el micrófono.');
       return false;

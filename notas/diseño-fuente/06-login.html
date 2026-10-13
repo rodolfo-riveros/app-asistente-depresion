@@ -1,0 +1,60 @@
+<x-dc>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 16px 24px 28px; display: flex; flex-direction: column; gap: 22px; background: #F3F4EF; font-family: 'Figtree', system-ui, sans-serif; color: #1F2A26; overflow: hidden">
+
+  <a href="Main.dc.html" aria-label="Volver" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center">
+    <svg width="22" height="22" fill="none" stroke="#1F2A26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+  </a>
+
+  <div style="display: flex; flex-direction: column; gap: 14px">
+    <svg width="48" height="48" fill="none" aria-hidden="true"><circle cx="17" cy="17" r="17" fill="#1F2A26"></circle><path d="M8 22a9 9 0 0 1 18 0" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round"></path><path d="M6 25h22" stroke="#F3F4EF" stroke-width="2" stroke-linecap="round"></path><path d="M17 8v3M10.5 10.5l2 2M23.5 10.5l-2 2" stroke="#F3F4EF" stroke-width="1.8" stroke-linecap="round"></path></svg>
+    <h1 style="margin: 0; font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -0.6px">Qué bueno<br>verte de nuevo</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4C5853">Alma recuerda dónde se quedaron. Entra para continuar.</p>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="email" style="font-size: 13px; font-weight: 600">Correo</label>
+      <input id="email" type="email" placeholder="tucorreo@ejemplo.com" style="height: 52px; box-sizing: border-box; border-radius: 16px; border: 1px solid #D5DBD2; background: #FFFFFF; padding: 0 16px; font-family: inherit; font-size: 15px; color: #1F2A26">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="pass" style="font-size: 13px; font-weight: 600">Contraseña</label>
+      <div style="position: relative">
+        <input id="pass" type="password" value="contrasena" style="width: 100%; height: 52px; box-sizing: border-box; border-radius: 16px; border: 1px solid #D5DBD2; background: #FFFFFF; padding: 0 52px 0 16px; font-family: inherit; font-size: 15px; color: #1F2A26">
+        <button aria-label="Mostrar contraseña" style="position: absolute; right: 4px; top: 4px; width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center">
+          <svg width="20" height="20" fill="none" stroke="#4C5853" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+      </div>
+    </div>
+    <a href="#" style="align-self: flex-end; font-size: 13.5px; font-weight: 600; padding: 4px 0">¿Olvidaste tu contraseña?</a>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <a href="Inicio.dc.html" style="height: 56px; border-radius: 28px; background: #1F2A26; color: #F3F4EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; text-decoration: none">Entrar</a>
+    <a href="Inicio.dc.html" style="height: 52px; border-radius: 26px; background: #FFFFFF; color: #1F2A26; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 15px; font-weight: 600; text-decoration: none">
+      <svg width="20" height="20" fill="none" stroke="#1F2A26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11v3M7.5 8.5A6 6 0 0 1 18 12v2M6 12v1a10 10 0 0 0 1 4.5M9 12a3 3 0 0 1 6 0v1.5a13 13 0 0 1-1.2 5.5M12 3a9 9 0 0 1 9 9v1"></path></svg>
+      Entrar con huella
+    </a>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px">
+    <div style="height: 1px; background: #D5DBD2; flex-grow: 1"></div>
+    <span style="font-size: 12.5px; color: #4C5853">o continúa con</span>
+    <div style="height: 1px; background: #D5DBD2; flex-grow: 1"></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+    <a href="Inicio.dc.html" style="height: 48px; border-radius: 24px; border: 1px solid #D5DBD2; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; text-decoration: none; color: #1F2A26">Google</a>
+    <a href="Inicio.dc.html" style="height: 48px; border-radius: 24px; border: 1px solid #D5DBD2; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; text-decoration: none; color: #1F2A26">Apple</a>
+  </div>
+
+  <p style="margin: auto 0 0; text-align: center; font-size: 14px; color: #4C5853">¿Aún no tienes cuenta? <a href="CrearCuenta.dc.html" style="font-weight: 700">Crear una</a></p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E8A87C&quot;,&quot;options&quot;:[&quot;#E8A87C&quot;,&quot;#C9B6E4&quot;,&quot;#F2C879&quot;]},&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#E8A87C' };
+}
+}
+</script>

@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HamiltonResult } from '../types/chat';
 
 const KEYS = {
   AUTH_TOKEN: '@auth_token',
+  REFRESH_TOKEN: '@refresh_token',
   USER_DATA: '@user_data',
   EVALUATION_HISTORY: '@eval_history',
   ONBOARDED: '@onboarded',
@@ -26,11 +28,29 @@ export const storage = {
     }
   },
 
+  /** Borra access y refresh token. */
   async removeToken(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(KEYS.AUTH_TOKEN);
+      await AsyncStorage.multiRemove([KEYS.AUTH_TOKEN, KEYS.REFRESH_TOKEN]);
     } catch (e) {
       console.error('Error removing auth token:', e);
+    }
+  },
+
+  async getRefreshToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(KEYS.REFRESH_TOKEN);
+    } catch {
+      return null;
+    }
+  },
+
+  async setRefreshToken(token: string | null | undefined): Promise<void> {
+    try {
+      if (token) await AsyncStorage.setItem(KEYS.REFRESH_TOKEN, token);
+      else await AsyncStorage.removeItem(KEYS.REFRESH_TOKEN);
+    } catch (e) {
+      console.error('Error saving refresh token:', e);
     }
   },
 
@@ -71,14 +91,11 @@ export const storage = {
     }
   },
 
-  async saveEvaluation(evaluation: any): Promise<void> {
-    try {
-      const current = await this.getHistory();
-      const updated = [evaluation, ...current];
-      await AsyncStorage.setItem(KEYS.EVALUATION_HISTORY, JSON.stringify(updated));
-    } catch (e) {
-      console.error('Error saving evaluation:', e);
-    }
+  /** Lanza si no se pudo guardar, para que la pantalla no confirme en falso. */
+  async saveEvaluation(evaluation: HamiltonResult): Promise<void> {
+    const current = await this.getHistory();
+    const updated = [evaluation, ...current];
+    await AsyncStorage.setItem(KEYS.EVALUATION_HISTORY, JSON.stringify(updated));
   },
 
   async isOnboarded(): Promise<boolean> {

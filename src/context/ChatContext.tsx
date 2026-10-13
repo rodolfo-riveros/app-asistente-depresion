@@ -60,6 +60,25 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // conversación previa, y así no parpadea el saludo inicial antes del historial.
   const [restaurando, setRestaurando] = useState<boolean>(true);
 
+  // Al cerrar sesión no puede quedar en memoria la conversación de la persona
+  // anterior: se vuelve al estado inicial. Se ajusta durante el render (patrón
+  // "estado derivado de una prop") en vez de en un efecto.
+  const [autenticadoAntes, setAutenticadoAntes] = useState(isAuthenticated);
+  if (autenticadoAntes !== isAuthenticated) {
+    setAutenticadoAntes(isAuthenticated);
+    if (!isAuthenticated) {
+      setMessages([initialGreeting]);
+      setSesionId(null);
+      setTestCompleto(false);
+      setProtocoloCrisisActivo(false);
+      setResultado(null);
+      setUbicacionSolicitada(false);
+      setCurrentEmotion('listening');
+      setLoading(false);
+      setRestaurando(true);
+    }
+  }
+
   /**
    * Al iniciar sesión se recupera la última conversación del servidor para
    * continuarla. Sin esto, cada arranque de la app empezaba de cero aunque el
@@ -108,11 +127,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
 
     try {
-      const response = await chatService.sendMessage(texto, sesionId || undefined, lat, lon);
-
-      if (!sesionId) {
-        setSesionId(response.sesion_id);
-      }
+      // Sin sesion_id: el backend elige el hilo único de la persona (v2). Se
+      // guarda el que devuelve sólo como dato informativo.
+      const response = await chatService.sendMessage(texto, undefined, lat, lon);
+      setSesionId(response.sesion_id);
 
       const assistantText = response.respuesta || 'Te escucho atentamente...';
       const isComplete = response.test_completo || false;
@@ -149,7 +167,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (evalResult) {
           setResultado(evalResult);
           // Copia local de respaldo; el histórico que se muestra viene del backend.
-          await storage.saveEvaluation(evalResult);
+          // Si la copia local falla no se interrumpe la conversación.
+          await storage.saveEvaluation(evalResult).catch(() => {});
         }
       }
     } catch (e) {

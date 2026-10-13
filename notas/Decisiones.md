@@ -1,0 +1,22 @@
+# Decisiones
+
+Registro de decisiones del rediseño. Formato: **decisión** — por qué. Añade al final.
+
+- **Tema claro "Aliento" reemplaza a Serenity Glass** — lo pidió el usuario (2026-10-08) con su diseño de Claude Design. Se elimina todo el glassmorphism.
+- **Nombre de la asistente: sigue siendo `asistente.nombre` (Aurora)** — el diseño dice "Alma", pero la identidad ya estaba fijada como Aurora. Está centralizado en `src/constants/asistente.ts`: cambiar a "Alma" es una línea si el usuario lo decide. **Nunca escribir el nombre a mano**: usar `asistente.nombre`.
+- **Marca de la app: "aliento"** (`app.nombre`) — sale del diseño.
+- **Escala: Hamilton (HDRS-17, 0–52), no PHQ-9 (0–27)** — el diseño muestra PHQ-9 de ejemplo, pero la tesis y el backend usan Hamilton. Se adaptan textos y segmentos de severidad a los niveles de Hamilton (Sin depresión / leve / moderada / severa).
+- **Pestañas: Inicio · Registro · Recursos · Perfil** — del diseño. Chat y Voz se abren encima sin tab bar. "Actividades" deja de ser pestaña: se accede desde Inicio ("Para hoy") y sigue existiendo como pantalla.
+- **Se omiten**: "Entrar con huella", "Google", "Apple", "¿Olvidaste tu contraseña?", "Prefiero empezar sin cuenta", "Bloqueo con huella" — el backend no tiene esos flujos; un botón que no hace nada es peor que no tenerlo.
+- **Check-in de ánimo diario y preferencias se guardan en el dispositivo** (`@mood_log`, `@preferencias`) — el backend no tiene endpoint para eso.
+- **El chequeo dentro del chat no muestra botones de respuesta inventados** — el backend conduce la escala de forma conversacional (texto libre). Si se muestra progreso, viene de `diagnosticoService` (`progreso.registrados/total`).
+- **Fuente Figtree vía `@expo-google-fonts/figtree`** y **SVG vía `react-native-svg`** — instalados con `npx expo install`.
+- **Contraseña mínima: 6 caracteres** (no 8 como el diseño) — coincide con `validation.isValidPassword` y Supabase.
+- **Cortes Hamilton de respaldo ≤7 / ≤13 / ≤18 / >18** — sólo si el backend devuelve un `nivel` no reconocido; el nivel del backend manda.
+- ~~"Recordatorio diario" sólo guarda la preferencia~~ → **resuelto**: notificaciones locales con `expo-notifications` (ver [[Notificaciones y voz]]).
+- **`isLoading` del AuthContext sólo para restaurar sesión** — si se activa en login/register, el Splash desmonta el formulario y se pierde el error.
+- **Fondo de la ventana nativa = `colors.background` vía `expo-system-ui`** — sin ese paquete Expo ignora `backgroundColor` de app.json en tiempo de ejecución y en cada transición asomaba el azul del tema anterior. Las pestañas usan `sceneStyle` crema y transición `fade`.
+- **Acceso simulado TEMPORAL (`EXPO_PUBLIC_AUTH_SIMULADO=true` en `.env`)** — el usuario lo pidió (2026-10-08) porque el backend aún no se conecta. Login y registro crean una sesión local (`token = 'sesion-simulada'`) sin llamar a la API, y en ese modo no se cierra sesión ante 401. Al conectar el backend: poner `false` y `npx expo start -c`; la sesión simulada guardada se descarta sola.
+- **Recordatorio diario = notificación LOCAL (`expo-notifications`), no push del servidor** — no necesita backend ni cuentas de Firebase/APNs para funcionar; se programa en el teléfono a la hora elegida. Push remoto queda para cuando haya backend (avisos de actividades, etc.).
+- **Voz de la asistente: femenina y pausada** (pedido del usuario 2026-10-08). Fase 1 (ya): mejor voz femenina en español del propio teléfono (`expo-speech`, gratis, sin red) + selector "Voz de {asistente}" en Perfil con botón Probar, ritmo pausado por defecto. Fase 2 (con backend): voz neuronal en la nube vía `POST /voz/sintetizar` del backend (la clave nunca va en la app), con caída automática a la voz del teléfono. Proveedor recomendado: **Azure AI Speech** (capa gratis F0 ≈ 0,5 M caracteres/mes de voces neuronales; voces `es-PE-CamilaNeural`, `es-MX-DaliaNeural`, `es-ES-ElviraNeural`; SSML para ralentizar y suavizar). Alternativa: Google Cloud TTS (1 M caracteres/mes gratis en WaveNet/Neural2, p. ej. `es-US-Neural2-A`). Descartados para producción: ElevenLabs gratis (10 k caracteres/mes, muy poco) y `edge-tts` (no oficial).
+- **Barra de navegación Android en Voz**: `expo-navigation-bar` con `enforceContrast:false` y `<NavigationBar style="light" />` sólo en Voz — sin franja clara del sistema sobre la pantalla oscura.

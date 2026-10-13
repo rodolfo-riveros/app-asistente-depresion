@@ -1,120 +1,75 @@
+/**
+ * Paleta "Aliento" — claro, salvia y melocotón.
+ *
+ * Fuente única de verdad de color: ningún componente debe escribir un hex
+ * a mano. Los valores salen tal cual del diseño (`notas/diseño-fuente/`).
+ * `tailwind.config.js` replica estas claves para usarlas con `className`.
+ */
 export const colors = {
-  background: '#101a2d',
-  onBackground: '#e6eefc',
+  // Fondos y superficies
+  background: '#F3F4EF',
+  surface: '#FFFFFF',
+  surfaceMuted: '#E8EBE3',
+  sage: '#DDE6DC',
+  sageMid: '#9DB5A3',
+  sageLight: '#C3D3C5',
+  sagePale: '#C9D3C5',
+  peachPale: '#FBEBDF',
+  peachSoft: '#F6D2B8',
+  lavenderPale: '#E6E1F1',
+  neutralPale: '#E8E3DC',
 
-  surface: '#17243a',
-  surfaceDim: '#0f1a2e',
-  surfaceBright: '#35445a',
-  surfaceLowest: '#0a1424',
-  surfaceLow: '#1a2840',
-  surfaceContainer: '#1e2d44',
-  surfaceHigh: '#22324a',
-  surfaceHighest: '#2d3d52',
-  surfaceInset: 'rgba(255, 255, 255, 0.04)',
+  // Verdes de marca
+  forest: '#2F4A3E',
+  moss: '#5E7F6E',
+  stone: '#8E9C95',
 
-  onSurface: '#e6eefc',
-  onSurfaceVariant: '#c9d3e3',
-  inverseSurface: '#e6eefc',
-  inverseOnSurface: '#1e2d44',
+  // Texto
+  ink: '#1F2A26',
+  inkSoft: '#4C5853',
+  inkOnSage: '#3D4944',
+  inkOnAccent: '#3A2A1F',
+  onDark: '#F3F4EF',
+  onDarkMuted: '#C9D3CD',
 
-  outline: '#8d99ab',
-  outlineVariant: '#424f61',
-  borderDark: 'rgba(255, 255, 255, 0.08)',
-  borderLight: 'rgba(255, 255, 255, 0.18)',
-  surfaceTint: '#b9d9ff',
+  // Acento (melocotón por defecto)
+  accent: '#E8A87C',
 
-  textPrimary: '#e6eefc',
-  textSecondary: '#c9d3e3',
-  textMuted: '#8d99ab',
+  // Bordes
+  border: '#D5DBD2',
+  divider: '#E1E4DC',
+  dividerSoft: '#EDEFE9',
+  toggleOff: '#C9D0C6',
 
-  glassBg: 'rgba(255, 255, 255, 0.06)',
-  glassBgLight: 'rgba(255, 255, 255, 0.10)',
-  glassBgSubtle: 'rgba(255, 255, 255, 0.03)',
-  glassBorder: 'rgba(255, 255, 255, 0.14)',
-  glassBorderStrong: 'rgba(255, 255, 255, 0.22)',
-  glassBorderActive: 'rgba(185, 217, 255, 0.50)',
-  glassHighlight: 'rgba(255, 255, 255, 0.08)',
-  glassShadow: '#000000',
-  glassOuterGlow: 'rgba(185, 217, 255, 0.06)',
+  // Ayuda / crisis
+  dangerBg: '#F6DCD3',
+  dangerInk: '#7A2E1E',
+  dangerInkSoft: '#5C2A1E',
+  dangerSolid: '#E9967A',
 
-  primary: '#b9d9ff',
-  primaryStrong: '#8bbdf0',
-  primaryDark: '#5a8fc4',
-  primaryLight: '#dae8fc',
-  onPrimary: '#003257',
-  primaryContainer: '#8bbdf0',
-  onPrimaryContainer: '#145283',
-  inversePrimary: '#2b6193',
-  primaryFixed: '#d0e4ff',
-  primaryFixedDim: '#b9d9ff',
-  onPrimaryFixed: '#001d35',
-  onPrimaryFixedVariant: '#03497a',
+  // Modo voz (oscuro)
+  voiceBg: '#22302B',
+  voiceSurface: '#2E3E38',
+  voiceRing: '#3F4F45',
+  voiceMuted: '#B9C6BE',
 
-  secondary: '#88e0cf',
-  onSecondary: '#003730',
-  secondaryContainer: '#00786a',
-  onSecondaryContainer: '#a0fdeb',
-  secondaryFixed: '#96f3e1',
-  secondaryFixedDim: '#88e0cf',
-  onSecondaryFixed: '#00201b',
-  onSecondaryFixedVariant: '#005046',
-
-  tertiary: '#d8ccff',
-  onTertiary: '#302c4b',
-  tertiaryContainer: '#c3bce3',
-  onTertiaryContainer: '#4f4b6c',
-  tertiaryFixed: '#e5deff',
-  tertiaryFixedDim: '#c8c2e9',
-  onTertiaryFixed: '#1b1735',
-  onTertiaryFixedVariant: '#474363',
-
-  accentWarm: '#f2c7a0',
-  accent: '#93c5fd',
-  accentLight: 'rgba(147, 197, 253, 0.10)',
-  accentGlow: 'rgba(147, 197, 253, 0.15)',
-
-  softGlow: 'rgba(185, 217, 255, 0.12)',
-
-  warning: '#fbbf24',
-  warningStrong: '#f59e0b',
-  warningBg: 'rgba(251, 191, 36, 0.10)',
-
-  error: '#ffb4ab',
-  onError: '#690005',
-  errorContainer: '#93000a',
-  onErrorContainer: '#ffdad6',
-  danger: '#ffb4ab',
-  dangerStrong: '#ff8a80',
-  dangerBg: 'rgba(255, 180, 171, 0.10)',
-  dangerBorder: 'rgba(255, 180, 171, 0.30)',
-
-  assistantBg: 'rgba(216, 204, 255, 0.12)',
-  assistantText: '#e6eefc',
-  assistantBorder: 'rgba(216, 204, 255, 0.20)',
-
-  userBg: '#88e0cf',
-  userBgGradient: ['#88e0cf', '#6ccab8'] as const,
-  userText: '#003730',
+  /** Onda táctil de Android (android_ripple) sobre superficies claras y oscuras. */
+  ripple: 'rgba(47, 74, 62, 0.12)',
+  rippleOnDark: 'rgba(243, 244, 239, 0.16)',
 
   white: '#FFFFFF',
+  transparent: 'transparent',
+  scrim: 'rgba(31, 42, 38, 0.45)',
+  shadow: '#1F2A26',
+} as const;
 
-  primaryGradient: ['#b9d9ff', '#8bbdf0'] as const,
-  dangerGradient: ['#ffb4ab', '#ff8a80'] as const,
-  warningGradient: ['#fbbf24', '#f59e0b'] as const,
+/** Escala de ánimo del check-in de Inicio (de "Muy mal" a "Muy bien"). */
+export const moodScale = [
+  { label: 'Muy mal', color: '#8E9C95' },
+  { label: 'Mal', color: '#AFC0B4' },
+  { label: 'Regular', color: '#C9D3C5' },
+  { label: 'Bien', color: '#EFC6A4' },
+  { label: 'Muy bien', color: '#E8A87C' },
+] as const;
 
-  spaceGradient: ['#101a2d', '#1e2d44', '#1a1a35'] as const,
-  crisisGradient: ['#1a0a0a', '#1e2d44', '#101a2d'] as const,
-  glowPrimary: 'rgba(185, 217, 255, 0.08)',
-  glowPrimarySoft: 'rgba(185, 217, 255, 0)',
-  glowSecondary: 'rgba(136, 224, 207, 0.10)',
-  glowSecondarySoft: 'rgba(136, 224, 207, 0)',
-  glowCrisis: 'rgba(255, 180, 171, 0.10)',
-  glowCrisisSoft: 'rgba(255, 180, 171, 0)',
-
-  glassGlow: 'rgba(185, 217, 255, 0.08)',
-  primaryGlow: 'rgba(185, 217, 255, 0.12)',
-  secondaryGlow: 'rgba(136, 224, 207, 0.10)',
-  accentWarmGlow: 'rgba(242, 199, 160, 0.10)',
-
-  scrim: 'rgba(10, 20, 36, 0.70)',
-};
+export type ColorToken = keyof typeof colors;

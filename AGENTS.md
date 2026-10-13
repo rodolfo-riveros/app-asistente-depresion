@@ -1,12 +1,14 @@
-# AGENTS.md — Asistente Hamilton
+# AGENTS.md — Asistente Hamilton (app "aliento")
+
+> **Working notes (Obsidian):** the repo root is an Obsidian vault. Before changing anything read `notas/00 Índice.md`, `notas/Rediseño Aliento.md` and the screen's note in `notas/pantallas/`. After each change update that note and add a line to `notas/Bitácora.md`; decisions go in `notas/Decisiones.md`.
 
 ## Stack
-- React Native 0.85 + Expo SDK 56
+- React Native 0.86 + Expo SDK 57
 - React 19, TypeScript 6 (strict), `@/` → `./src/*`
 - NativeWind (Tailwind for RN) — prefer `className` over `StyleSheet.create`; StyleSheet acceptable for absolute fills and programmatic composite styles
 - `@react-navigation` native-stack + bottom-tabs
 - `react-native-reanimated` 4.3 + `react-native-worklets` plugin
-- Glass: `expo-blur` + `expo-linear-gradient`
+- UI: `react-native-svg` (design icons/illustrations) + `@expo-google-fonts/figtree`
 - Voice: `expo-audio` (dictation/recording) + `expo-speech` (TTS)
 - Location: `expo-location` (mental health center search in crisis)
 - HTTP: `axios` with JWT interceptor
@@ -33,8 +35,8 @@ EXPO_PUBLIC_ENABLE_NOTIFICATIONS=true
 
 ## Architecture
 - `App.tsx` → `SafeAreaProvider > AuthProvider > ChatProvider > NavigationContainer > RootNavigator`
-- `RootNavigator` switches auth stack (Splash/Login/Register, animation `fade`) vs `AppNavigator` (bottom tabs: Chat, History, Profile)
-- Chat tab stack: ChatMain → Result / CrisisProtocol (animation `slide_from_right`)
+- `RootNavigator` (types in `src/navigation/types.ts`): signed out → Bienvenida → Login / Register; signed in → `MainApp` (tabs) plus `Chat`, `Voz`, `Actividades`, `Result`, `CrisisProtocol` stacked on top without tab bar.
+- `AppNavigator` (custom `components/TabBar.tsx`): Inicio · Registro · Recursos · Perfil.
 
 ### API (`src/services/api.ts`)
 Talks to real FastAPI backend (`asistente-hamilton-backend`). **No mock fallback** — without the backend, login/register/chat fail with the real error message.
@@ -42,26 +44,31 @@ Talks to real FastAPI backend (`asistente-hamilton-backend`). **No mock fallback
 | Endpoint | Use |
 |---|---|
 | `POST /auth/register` | Register (payload: `{nombre, email, password}`) |
-| `POST /auth/login` | Login (payload: `{email, password}`) |
+| `POST /auth/login` | Login (payload: `{email, password}`) → `{token, refresh_token?, expires_in?, user}` |
+| `POST /auth/refresh` | Renews the Supabase token (app retries once on 401; `@refresh_token`) |
+| `GET /auth/me` | Validates the stored session at startup (background) |
 | `POST /chat/mensaje` | Chat message; returns `resultado` when test completes |
 | `POST /voz/transcribir` | Audio transcription (120s timeout, multipart FormData) |
+| `POST /voz/sintetizar` | Cloud TTS (Azure, `es-PE-CamilaNeural`), 503 if not configured → phone voice. App flag `EXPO_PUBLIC_TTS_NUBE` |
+| `GET /perfil`, `PUT /perfil`, `POST /perfil/foto`, `GET/POST/PATCH/DELETE /actividades`, `GET /diagnostico`, `GET /chat/historial` | See services/ |
 | `GET /evaluaciones` | User evaluation history |
 | `GET /salud` | Health check |
+
+Render cold start (~60 s): app pings `/salud` on launch; `useAuth().servidorDespertando` + `<AvisoDespertando>` show a calm notice. `EXPO_PUBLIC_AUTH_SIMULADO` (off) keeps a local-only login for demos.
 
 Auth: backend delegates to Supabase Auth, returns `access_token` → stored in `@auth_token` → sent as `Authorization: Bearer`. 401 triggers `setUnauthorizedHandler` → local logout. AsyncStorage caches evaluation history for offline access.
 
 ### Voice input
 `useDictado` hook (`src/hooks/useDictado.ts`) wraps `expo-audio` recorder. iOS requires toggling `allowsRecording` between record/playback (recording lowers playback volume). Audio uploaded to `POST /voz/transcribir`; transcription returned as text. TTS via `expo-speech` (`src/services/voz.ts`).
 
-## Design — Serenity Glass (dark glassmorphism)
-Palette: background `#0b1326` (Midnight), primary soft blue `#c6dfff`, secondary teal `#7ad7c6`, tertiary lavender `#dfd8ff`. Non-negotiable rules:
-- `src/constants/colors.ts` = single source of truth; `src/constants/glass.ts` = single glass recipe. NO hardcoded hex/rgba in components.
-- All glass via `<Glass>` or `<GlassCard>`. `<GlassScrim>` for modal overlays. All glass surfaces use white-tinted fill (3–10% opacity) over dark blur (`glassTint = 'dark'`).
-- `<GlassCard style>` = outer box (margins/width); padding/content alignment goes in `contentStyle`.
-- `SpatialContainer` renders a deep-blue → purple gradient (Midnight Aurora) with no hard edges.
-- Borders: `glassBorder`/`glassBorderStrong` (white 15–25% opacity) = glass edge. Dividers use `borderDark` (white 8%). Nested panels use `surfaceInset` (white 3%).
-- AA contrast (4.5:1) on `colors.background` (#0b1326); solid fills use `*Gradient` so light text passes contrast.
-- Border radii: 8px (sm), 16px (default), 24px (md), 32px (lg), 48px (xl), 9999px (full) — match `spacing.ts`.
+## Design — Aliento (light, sage + peach)
+Visual source: `notas/diseño-fuente/*.html` (Claude Design export, 390×844). Full detail in `notas/Rediseño Aliento.md`.
+- `src/constants/colors.ts` = single source of truth (background `#F3F4EF`, white surfaces, `sage #DDE6DC`, `forest #2F4A3E`, `ink #1F2A26`, `accent #E8A87C`, crisis `dangerBg`/`dangerInk`, voice mode `voiceBg #22302B`). NO hardcoded hex/rgba in components.
+- Figtree font via `src/constants/typography.ts`; use `<Txt weight>` — never bare `fontWeight` (Android doesn't switch font files).
+- Primitives in `src/components/ui/`: `Txt`, `Title`, `Icon` (SVG from the design), `Button`, `Card`, `TextField`, `Toggle`, `Screen`, `Logo`, `IconTile`, `IconButton`, `Chip`, `ProgressBar`, `HelpButton`, `Divider`.
+- Flat surfaces, no shadow/blur/gradients. Radii: 22 cards, 18 list rows, 14–16 cells/inputs, full pills (`radius` in `spacing.ts`). Touch targets ≥ 44 px.
+- Adaptive layout: `hooks/useLayout` (compacto / bajo / tablet / escala); `Screen` centers content at 560 px on tablets; `Txt` caps system font scale (1.35, titles 1.2). Android ripples use `colors.ripple`/`rippleOnDark`.
+- Local-only data: `utils/animo.ts` (`@mood_log`, daily mood check-in) and `utils/preferencias.ts` (`@preferencias`).
 
 ## Conventions & gotchas
 - **ESLint**: flat config (`eslint.config.js`), NOT `.eslintrc`. Rule `react/display-name: off`.

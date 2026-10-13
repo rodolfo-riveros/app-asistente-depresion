@@ -1,29 +1,44 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Modal,
+  Keyboard,
   Platform,
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
-  Text,
+  TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
-import { SpatialContainer } from '../../components/SpatialContainer';
-import { Glass, GlassScrim } from '../../components/Glass';
-import { GlassCard } from '../../components/GlassCard';
-import { AuthButton } from '../../components/AuthButton';
-import { AuthInput } from '../../components/AuthInput';
+import { useFocusEffect } from '@react-navigation/native';
+import {
+  Button,
+  Card,
+  Chip,
+  Icon,
+  IconButton,
+  IconName,
+  IconTile,
+  Screen,
+  TextField,
+  Title,
+  Txt,
+} from '../../components/ui';
 import { colors } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
-import { glassGlow } from '../../constants/glass';
+import { radius } from '../../constants/spacing';
+import { asistente } from '../../constants/asistente';
+import type { RootScreenProps } from '../../navigation/types';
 import { Actividad, CategoriaActividad, actividadesService } from '../../services/actividades';
+import { Hoja } from '../profile/components/Hoja';
+import {
+  CATEGORIAS,
+  categoriaDe,
+  esVencida,
+  haptico,
+  mensajeDe,
+  textoCuando,
+} from './actividadesUtils';
 
 type Filtro = 'pendientes' | 'vencidas' | 'completadas';
 
@@ -32,27 +47,6 @@ const FILTROS: { clave: Filtro; etiqueta: string }[] = [
   { clave: 'vencidas', etiqueta: 'Vencidas' },
   { clave: 'completadas', etiqueta: 'Hechas' },
 ];
-
-interface EstiloCategoria {
-  clave: CategoriaActividad;
-  etiqueta: string;
-  icono: keyof typeof Ionicons.glyphMap;
-  color: string;
-}
-
-const CATEGORIAS: EstiloCategoria[] = [
-  { clave: 'autocuidado', etiqueta: 'Autocuidado', icono: 'leaf-outline', color: colors.secondary },
-  { clave: 'social', etiqueta: 'Social', icono: 'people-outline', color: colors.primary },
-  { clave: 'estudio', etiqueta: 'Estudio', icono: 'book-outline', color: colors.tertiary },
-  { clave: 'salud', etiqueta: 'Salud', icono: 'heart-outline', color: colors.accent },
-  { clave: 'ocio', etiqueta: 'Ocio', icono: 'musical-notes-outline', color: colors.accentWarm },
-  { clave: 'general', etiqueta: 'General', icono: 'sparkles-outline', color: colors.textSecondary },
-];
-
-const CATEGORIA_POR_DEFECTO = CATEGORIAS[CATEGORIAS.length - 1];
-
-const categoriaDe = (clave?: string): EstiloCategoria =>
-  CATEGORIAS.find((c) => c.clave === clave) ?? CATEGORIA_POR_DEFECTO;
 
 const PLAZOS: { dias: number; etiqueta: string }[] = [
   { dias: 0, etiqueta: 'Hoy' },
@@ -68,60 +62,6 @@ const BORRADOR_INICIAL = {
   dias: 1,
 };
 
-const MS_DIA = 86400000;
-const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const MESES = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
-
-const inicioDelDia = (fecha: Date) =>
-  new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()).getTime();
-
-/**
- * Fechas en lenguaje cercano ("mañana", "hace 3 días").
- * Un compromiso se vive en días, no en timestamps: la fecha cruda distancia.
- */
-const fechaRelativa = (iso?: string | null): string | null => {
-  if (!iso) return null;
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return null;
-
-  const dias = Math.round((inicioDelDia(fecha) - inicioDelDia(new Date())) / MS_DIA);
-  // La hora sólo se menciona si se fijó una: medianoche significa "ese día".
-  const hora =
-    fecha.getHours() === 0 && fecha.getMinutes() === 0
-      ? ''
-      : ` a las ${fecha.toLocaleTimeString('es-PE', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        })}`;
-
-  if (dias === 0) return `hoy${hora}`;
-  if (dias === 1) return `mañana${hora}`;
-  if (dias === 2) return `pasado mañana${hora}`;
-  if (dias > 2 && dias < 7) return `el ${DIAS_SEMANA[fecha.getDay()]}${hora}`;
-  if (dias >= 7 && dias < 14) return 'la próxima semana';
-  if (dias === -1) return `ayer${hora}`;
-  if (dias < -1 && dias > -7) return `hace ${-dias} días`;
-  if (dias <= -7 && dias > -30) {
-    const semanas = Math.round(-dias / 7);
-    return semanas === 1 ? 'hace una semana' : `hace ${semanas} semanas`;
-  }
-  return `el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`;
-};
-
 /** Fecha objetivo de un plazo rápido: al final del día, para no nacer vencida. */
 const dentroDe = (dias: number): string => {
   const fecha = new Date();
@@ -129,8 +69,6 @@ const dentroDe = (dias: number): string => {
   fecha.setHours(20, 0, 0, 0);
   return fecha.toISOString();
 };
-
-const esVencida = (actividad: Actividad) => !actividad.completada && Boolean(actividad.vencida);
 
 /** ¿La actividad sigue perteneciendo al grupo que se está viendo? */
 const encajaEn = (actividad: Actividad, filtro: Filtro) =>
@@ -140,34 +78,29 @@ const encajaEn = (actividad: Actividad, filtro: Filtro) =>
       ? esVencida(actividad)
       : !actividad.completada;
 
-const mensajeDe = (error: unknown) =>
-  error instanceof Error ? error.message : 'Inténtalo de nuevo en un momento.';
-
-const VACIOS: Record<
-  Filtro,
-  { icono: keyof typeof Ionicons.glyphMap; titulo: string; texto: string }
-> = {
+const VACIOS: Record<Filtro, { icono: IconName; fondo: string; titulo: string; texto: string }> = {
   pendientes: {
-    icono: 'sparkles-outline',
+    icono: 'calendar',
+    fondo: colors.sage,
     titulo: 'Todavía no hay nada acordado',
-    texto:
-      'Cuando converses con {asistente.nombre} y decidan juntos un paso pequeño, lo vas a encontrar aquí.',
+    texto: `Cuando converses con ${asistente.nombre} y decidan juntos un paso pequeño, lo vas a encontrar aquí.`,
   },
   vencidas: {
-    icono: 'heart-outline',
+    icono: 'heart',
+    fondo: colors.peachPale,
     titulo: 'Nada se te quedó atrás',
     texto:
       'Si alguna vez se pasa la fecha, aparece aquí sin reproches: para retomarlo cuando puedas.',
   },
   completadas: {
-    icono: 'checkmark-circle-outline',
+    icono: 'check',
+    fondo: colors.sage,
     titulo: 'Aún no marcaste nada como hecho',
     texto: 'Cada cosa que completes se queda aquí, para que puedas mirar atrás y verlo.',
   },
 };
 
-export const ActividadesScreen: React.FC = () => {
-  const navigation = useNavigation<NavigationProp<Record<string, undefined>>>();
+export const ActividadesScreen: React.FC<RootScreenProps<'Actividades'>> = ({ navigation }) => {
   const [filtro, setFiltro] = useState<Filtro>('pendientes');
   const [items, setItems] = useState<Actividad[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -176,6 +109,7 @@ export const ActividadesScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [borrador, setBorrador] = useState(BORRADOR_INICIAL);
+  const notaRef = useRef<TextInput>(null);
 
   /**
    * El primer `await` va antes de cualquier setState: el linter prohíbe
@@ -194,7 +128,7 @@ export const ActividadesScreen: React.FC = () => {
     }
   }, []);
 
-  // Se recarga al volver a la pestaña: lo que acuerdes en el chat aparece solo.
+  // Se recarga al volver a la pantalla: lo que acuerdes en el chat aparece solo.
   useFocusEffect(
     useCallback(() => {
       cargar(filtro);
@@ -224,6 +158,8 @@ export const ActividadesScreen: React.FC = () => {
     };
 
     // Optimista: el toque se siente inmediato y se revierte si el backend falla.
+    if (completada) haptico.exito();
+    else haptico.leve();
     setItems((prev) =>
       prev.flatMap((a) =>
         a.id !== actividad.id ? [a] : encajaEn(optimista, filtro) ? [optimista] : []
@@ -264,8 +200,9 @@ export const ActividadesScreen: React.FC = () => {
 
   const guardarNueva = async () => {
     const titulo = borrador.titulo.trim();
-    if (!titulo) return;
+    if (!titulo || guardando) return;
 
+    Keyboard.dismiss();
     setGuardando(true);
     try {
       await actividadesService.crear({
@@ -288,564 +225,284 @@ export const ActividadesScreen: React.FC = () => {
   const renderTarjeta = (actividad: Actividad) => {
     const categoria = categoriaDe(actividad.categoria);
     const vencida = esVencida(actividad);
-    const relativa = fechaRelativa(
-      actividad.completada
-        ? (actividad.completada_en ?? actividad.para_cuando)
-        : actividad.para_cuando
-    );
-    const cuando = !relativa
-      ? 'Sin fecha fija'
-      : actividad.completada
-        ? `Hecho ${relativa}`
-        : vencida
-          ? `Se pasó ${relativa}`
-          : `Para ${relativa}`;
-    const colorCuando = vencida
-      ? colors.warning
-      : actividad.completada
-        ? colors.secondary
-        : colors.textMuted;
+    const hecha = actividad.completada;
 
     return (
-      <GlassCard
-        level="low"
-        radius={spacing.borderRadiusSm}
-        style={styles.tarjeta}
-        contentStyle={styles.tarjetaContenido}
-        glowColor={vencida ? colors.warning : undefined}>
-        <View style={styles.filaPrincipal}>
-          <Pressable
-            onPress={() => alternarHecha(actividad)}
-            hitSlop={10}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: actividad.completada }}
-            accessibilityLabel={
-              actividad.completada
-                ? `Desmarcar: ${actividad.titulo}`
-                : `Marcar como hecho: ${actividad.titulo}`
-            }
-            style={({ pressed }) => [styles.marca, pressed && styles.presionado]}>
-            <Ionicons
-              name={actividad.completada ? 'checkmark-circle' : 'ellipse-outline'}
-              size={26}
-              color={
-                actividad.completada ? colors.secondary : vencida ? colors.warning : colors.primary
-              }
-            />
-          </Pressable>
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: radius.lg,
+          padding: 12,
+          gap: 10,
+        }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <IconTile name={categoria.icono} bg={categoria.fondo} color={colors.forest} />
 
-          <View style={styles.textos}>
-            <Text style={[styles.titulo, actividad.completada && styles.tituloHecho]}>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Txt
+              size={14.5}
+              weight={hecha ? 'medium' : 'semibold'}
+              color={hecha ? colors.inkSoft : colors.ink}
+              style={hecha ? { textDecorationLine: 'line-through' } : undefined}>
               {actividad.titulo}
-            </Text>
-            {actividad.nota ? <Text style={styles.nota}>{actividad.nota}</Text> : null}
-
-            <View style={styles.metaFila}>
-              <View style={styles.chip}>
-                <Ionicons name={categoria.icono} size={11} color={categoria.color} />
-                <Text style={[styles.chipTexto, { color: categoria.color }]}>
-                  {categoria.etiqueta}
-                </Text>
-              </View>
-              <View style={styles.cuandoFila}>
-                <Ionicons
-                  name={vencida ? 'alert-circle-outline' : 'time-outline'}
-                  size={12}
-                  color={colorCuando}
-                />
-                <Text style={[styles.cuando, { color: colorCuando }]}>{cuando}</Text>
-              </View>
-            </View>
+            </Txt>
+            {actividad.nota ? (
+              <Txt size={12.5} color={colors.inkSoft} leading={1.4}>
+                {actividad.nota}
+              </Txt>
+            ) : null}
+            <Txt
+              size={12}
+              weight={vencida ? 'semibold' : 'regular'}
+              color={vencida ? colors.dangerInk : colors.inkSoft}>
+              {`${categoria.etiqueta} · ${textoCuando(actividad)}`}
+            </Txt>
           </View>
 
           <Pressable
-            onPress={() => confirmarBorrado(actividad)}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={`Quitar de la lista: ${actividad.titulo}`}
-            style={({ pressed }) => [styles.borrar, pressed && styles.presionado]}>
-            <Ionicons name="close" size={16} color={colors.textMuted} />
+            onPress={() => alternarHecha(actividad)}
+            hitSlop={4}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: hecha }}
+            accessibilityLabel={
+              hecha ? `Desmarcar: ${actividad.titulo}` : `Marcar como hecho: ${actividad.titulo}`
+            }
+            // Android: onda circular; iOS: opacidad.
+            android_ripple={{ color: colors.ripple, borderless: true, radius: 22 }}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed && Platform.OS !== 'android' ? 0.6 : 1,
+            })}>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                borderWidth: hecha ? 0 : 1.5,
+                borderColor: vencida ? colors.dangerInk : colors.stone,
+                backgroundColor: hecha ? colors.forest : colors.transparent,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              {hecha ? (
+                <Icon name="check" size={16} color={colors.onDark} strokeWidth={2.4} />
+              ) : null}
+            </View>
           </Pressable>
+
+          <IconButton
+            name="trash"
+            iconSize={18}
+            color={colors.inkSoft}
+            accessibilityLabel={`Quitar de la lista: ${actividad.titulo}`}
+            onPress={() => confirmarBorrado(actividad)}
+            style={{ marginLeft: -8 }}
+          />
         </View>
 
         {actividad.motivo_no_realizada ? (
-          <View style={styles.motivo}>
-            <Text style={styles.motivoEtiqueta}>Lo que contaste</Text>
-            <Text style={styles.motivoTexto}>{actividad.motivo_no_realizada}</Text>
+          <View
+            style={{
+              backgroundColor: colors.peachPale,
+              borderRadius: radius.md,
+              padding: 10,
+              gap: 3,
+            }}>
+            <Txt size={11} weight="bold" tracking={0.6} color={colors.inkOnAccent}>
+              LO QUE CONTASTE
+            </Txt>
+            <Txt size={13} color={colors.inkSoft} leading={1.4}>
+              {actividad.motivo_no_realizada}
+            </Txt>
           </View>
         ) : null}
-      </GlassCard>
+      </View>
     );
   };
 
   const vacio = VACIOS[filtro];
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refrescando}
+      onRefresh={refrescar}
+      tintColor={colors.forest}
+      colors={[colors.forest]}
+    />
+  );
 
   return (
-    <SpatialContainer>
-      <View style={styles.contenedor}>
-        <View style={styles.cabecera}>
-          <View style={styles.cabeceraTextos}>
-            <Text style={styles.tituloPantalla}>Tus acuerdos</Text>
-            <Text style={styles.subtitulo}>Lo que fuiste decidiendo en tus conversaciones</Text>
-          </View>
-          <Pressable
-            onPress={() => setModalVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Añadir un acuerdo"
-            style={({ pressed }) => [styles.botonAnadir, pressed && styles.presionado]}>
-            <Ionicons name="add" size={22} color={colors.primary} />
-          </Pressable>
-        </View>
-
-        <Glass
-          level="low"
-          radius={spacing.borderRadiusSm}
-          contentStyle={styles.segmentos}
-          style={styles.segmentosCaja}>
-          {FILTROS.map((f) => {
-            const activo = f.clave === filtro;
-            return (
-              <Pressable
-                key={f.clave}
-                onPress={() => cambiarFiltro(f.clave)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: activo }}
-                accessibilityLabel={`Ver ${f.etiqueta.toLowerCase()}`}
-                style={[styles.segmento, activo && styles.segmentoActivo]}>
-                <Text style={[styles.segmentoTexto, activo && styles.segmentoTextoActivo]}>
-                  {f.etiqueta}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </Glass>
-
-        {error ? (
-          <View style={styles.avisoFila}>
-            <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.avisoTexto}> {error}</Text>
-          </View>
-        ) : null}
-
-        {cargando ? (
-          <View style={styles.centrado}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
-        ) : items.length === 0 ? (
-          <ScrollView
-            contentContainerStyle={styles.listaVacia}
-            refreshControl={
-              <RefreshControl
-                refreshing={refrescando}
-                onRefresh={refrescar}
-                tintColor={colors.primary}
-              />
-            }>
-            <GlassCard
-              level="low"
-              radius={spacing.borderRadiusSm}
-              contentStyle={styles.vacioContenido}>
-              <Ionicons name={vacio.icono} size={44} color={colors.primary} />
-              <Text style={styles.vacioTitulo}>{vacio.titulo}</Text>
-              <Text style={styles.vacioTexto}>{vacio.texto}</Text>
-              {filtro === 'pendientes' ? (
-                <AuthButton
-                  variant="secondary"
-                  label="Abrir el chat"
-                  onPress={() => navigation.navigate('ChatTab')}
-                  style={styles.vacioBoton}
-                />
-              ) : null}
-            </GlassCard>
-          </ScrollView>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => renderTarjeta(item)}
-            contentContainerStyle={styles.lista}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refrescando}
-                onRefresh={refrescar}
-                tintColor={colors.primary}
-              />
-            }
+    <Screen edges={['top', 'left', 'right', 'bottom']} contentStyle={{ paddingTop: 12 }}>
+      {/* Cabecera */}
+      <View style={{ gap: 6 }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <IconButton
+            name="back"
+            accessibilityLabel="Volver"
+            onPress={() => navigation.goBack()}
+            style={{ marginLeft: -10 }}
           />
-        )}
+          <IconButton
+            name="plus"
+            bg={colors.surface}
+            bordered
+            accessibilityLabel="Añadir un acuerdo"
+            onPress={() => setModalVisible(true)}
+          />
+        </View>
+        <Title>Tus acuerdos</Title>
+        <Txt size={13.5} color={colors.inkSoft}>
+          Lo que fuiste decidiendo en tus conversaciones
+        </Txt>
       </View>
 
+      {/* Filtros */}
+      {/* Con fuente grande en 360 px las tres píldoras no caben en una fila: parten. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="tablist">
+        {FILTROS.map((f) => (
+          <Chip
+            key={f.clave}
+            label={f.etiqueta}
+            selected={f.clave === filtro}
+            onPress={() => cambiarFiltro(f.clave)}
+          />
+        ))}
+      </View>
+
+      {error ? (
+        <Card tone="danger" rounded={radius.lg} padding={12} gap={8}>
+          <View style={{ gap: 2 }}>
+            <Txt size={13.5} weight="semibold" color={colors.dangerInk}>
+              No se pudo cargar la lista
+            </Txt>
+            <Txt size={12.5} color={colors.dangerInkSoft} accessibilityLiveRegion="polite">
+              {error}
+            </Txt>
+          </View>
+          <Button
+            label="Reintentar"
+            variant="secondary"
+            size="sm"
+            loading={refrescando}
+            onPress={refrescar}
+            style={{ alignSelf: 'flex-start' }}
+          />
+        </Card>
+      ) : null}
+
+      {cargando ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.forest} />
+        </View>
+      ) : items.length === 0 ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40 }}
+          refreshControl={refreshControl}>
+          {error ? null : (
+            <Card style={{ alignItems: 'center', paddingVertical: 28 }} gap={10}>
+              <IconTile name={vacio.icono} bg={vacio.fondo} size={56} rounded={28} iconSize={24} />
+              <Txt size={17} weight="bold" align="center">
+                {vacio.titulo}
+              </Txt>
+              <Txt size={13.5} color={colors.inkSoft} align="center" leading={1.45}>
+                {vacio.texto}
+              </Txt>
+              {filtro === 'pendientes' ? (
+                <Button
+                  label="Abrir el chat"
+                  icon="chat"
+                  size="md"
+                  onPress={() => navigation.navigate('Chat')}
+                  style={{ alignSelf: 'stretch', marginTop: 6 }}
+                />
+              ) : null}
+            </Card>
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          style={{ flex: 1 }}
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => renderTarjeta(item)}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          contentContainerStyle={{ paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
+        />
+      )}
+
       {/* Añadir a mano: no todo se acuerda hablando */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={cerrarModal}>
-        <GlassScrim>
-          <KeyboardAvoidingView
-            style={styles.modalCaja}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <Glass
-              level="high"
-              radius={spacing.borderRadiusSm}
-              contentStyle={styles.modalContenido}>
-              <View style={styles.modalCabecera}>
-                <Text style={styles.modalTitulo}>Un nuevo acuerdo</Text>
-                <Pressable
-                  onPress={cerrarModal}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cerrar"
-                  style={({ pressed }) => [pressed && styles.presionado]}>
-                  <Ionicons name="close" size={20} color={colors.textMuted} />
-                </Pressable>
-              </View>
+      <Hoja visible={modalVisible} titulo="Un nuevo acuerdo" onClose={cerrarModal}>
+        <Txt size={13.5} color={colors.inkSoft} leading={1.4}>
+          Algo pequeño y concreto que quieras probar estos días.
+        </Txt>
 
-              <ScrollView
-                style={styles.modalScroll}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}>
-                <Text style={styles.modalAyuda}>
-                  Algo pequeño y concreto que quieras probar estos días.
-                </Text>
+        <TextField
+          label="¿Qué quieres hacer?"
+          placeholder="Salir a caminar por el centro"
+          value={borrador.titulo}
+          autoCapitalize="sentences"
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => notaRef.current?.focus()}
+          maxLength={120}
+          onChangeText={(t) => setBorrador((b) => ({ ...b, titulo: t }))}
+        />
+        <TextField
+          ref={notaRef}
+          label="Una nota para ti (opcional)"
+          placeholder="Para probar hacer cosas por mi cuenta"
+          value={borrador.nota}
+          autoCapitalize="sentences"
+          multiline
+          maxLength={300}
+          onChangeText={(t) => setBorrador((b) => ({ ...b, nota: t }))}
+        />
 
-                <AuthInput
-                  label="¿Qué quieres hacer?"
-                  placeholder="Salir a caminar por el centro"
-                  value={borrador.titulo}
-                  autoCapitalize="sentences"
-                  onChangeText={(t) => setBorrador((b) => ({ ...b, titulo: t }))}
-                />
-                <AuthInput
-                  label="Una nota para ti (opcional)"
-                  placeholder="Para probar hacer cosas por mi cuenta"
-                  value={borrador.nota}
-                  autoCapitalize="sentences"
-                  multiline
-                  onChangeText={(t) => setBorrador((b) => ({ ...b, nota: t }))}
-                />
-
-                <Text style={styles.grupoEtiqueta}>¿De qué se trata?</Text>
-                <View style={styles.grupoChips}>
-                  {CATEGORIAS.map((c) => {
-                    const activo = c.clave === borrador.categoria;
-                    return (
-                      <Pressable
-                        key={c.clave}
-                        onPress={() => setBorrador((b) => ({ ...b, categoria: c.clave }))}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: activo }}
-                        accessibilityLabel={c.etiqueta}
-                        style={[styles.opcion, activo && styles.opcionActiva]}>
-                        <Ionicons name={c.icono} size={13} color={c.color} />
-                        <Text style={[styles.opcionTexto, activo && styles.opcionTextoActivo]}>
-                          {c.etiqueta}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.grupoEtiqueta}>¿Para cuándo?</Text>
-                <View style={styles.grupoChips}>
-                  {PLAZOS.map((p) => {
-                    const activo = p.dias === borrador.dias;
-                    return (
-                      <Pressable
-                        key={p.dias}
-                        onPress={() => setBorrador((b) => ({ ...b, dias: p.dias }))}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: activo }}
-                        accessibilityLabel={p.etiqueta}
-                        style={[styles.opcion, activo && styles.opcionActiva]}>
-                        <Text style={[styles.opcionTexto, activo && styles.opcionTextoActivo]}>
-                          {p.etiqueta}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-
-              <AuthButton
-                label="Guardar"
-                loading={guardando}
-                disabled={!borrador.titulo.trim()}
-                onPress={guardarNueva}
-                style={styles.modalBoton}
+        <View style={{ gap: 8 }}>
+          <Txt size={13} weight="semibold">
+            ¿De qué se trata?
+          </Txt>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {CATEGORIAS.map((c) => (
+              <Chip
+                key={c.clave}
+                label={c.etiqueta}
+                selected={c.clave === borrador.categoria}
+                onPress={() => setBorrador((b) => ({ ...b, categoria: c.clave }))}
               />
-            </Glass>
-          </KeyboardAvoidingView>
-        </GlassScrim>
-      </Modal>
-    </SpatialContainer>
+            ))}
+          </View>
+        </View>
+
+        <View style={{ gap: 8 }}>
+          <Txt size={13} weight="semibold">
+            ¿Para cuándo?
+          </Txt>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {PLAZOS.map((p) => (
+              <Chip
+                key={p.dias}
+                label={p.etiqueta}
+                selected={p.dias === borrador.dias}
+                onPress={() => setBorrador((b) => ({ ...b, dias: p.dias }))}
+              />
+            ))}
+          </View>
+        </View>
+
+        <Button
+          label="Guardar"
+          loading={guardando}
+          disabled={!borrador.titulo.trim()}
+          onPress={guardarNueva}
+        />
+      </Hoja>
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  contenedor: {
-    flex: 1,
-    paddingHorizontal: spacing.screenPadding,
-  },
-  cabecera: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  cabeceraTextos: {
-    flex: 1,
-  },
-  tituloPantalla: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  subtitulo: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  botonAnadir: {
-    width: 44,
-    height: 44,
-    borderRadius: spacing.borderRadiusFull,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.glassBg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...glassGlow(colors.primary, 12),
-  },
-  segmentosCaja: {
-    marginBottom: spacing.md,
-  },
-  segmentos: {
-    flexDirection: 'row',
-    padding: 4,
-    gap: 4,
-  },
-  segmento: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: spacing.borderRadiusSm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  segmentoActivo: {
-    backgroundColor: colors.glassBgLight,
-    borderColor: colors.glassBorderActive,
-  },
-  segmentoTexto: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  segmentoTextoActivo: {
-    color: colors.textPrimary,
-  },
-  avisoFila: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
-  },
-  avisoTexto: {
-    flexShrink: 1,
-    fontSize: 12,
-    color: colors.textMuted,
-    lineHeight: 16,
-  },
-  centrado: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 80,
-  },
-  lista: {
-    paddingBottom: 110,
-  },
-  listaVacia: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 110,
-  },
-  vacioContenido: {
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  vacioTitulo: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  vacioTexto: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  vacioBoton: {
-    width: '100%',
-  },
-  tarjeta: {
-    marginBottom: spacing.sm + 4,
-  },
-  tarjetaContenido: {
-    padding: spacing.md + 2,
-  },
-  filaPrincipal: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm + 2,
-  },
-  marca: {
-    paddingTop: 1,
-  },
-  textos: {
-    flex: 1,
-  },
-  titulo: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    lineHeight: 21,
-  },
-  tituloHecho: {
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  nota: {
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 18,
-    marginTop: 3,
-  },
-  metaFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.sm + 2,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: spacing.borderRadiusSm,
-    backgroundColor: colors.surfaceInset,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-  },
-  chipTexto: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  cuandoFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  cuando: {
-    fontSize: 12,
-  },
-  motivo: {
-    marginTop: spacing.sm + 4,
-    padding: spacing.sm + 2,
-    borderRadius: spacing.borderRadiusSm,
-    backgroundColor: colors.warningBg,
-  },
-  motivoEtiqueta: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.warning,
-    marginBottom: 3,
-  },
-  motivoTexto: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  borrar: {
-    padding: 2,
-  },
-  presionado: {
-    opacity: 0.6,
-  },
-  modalCaja: {
-    width: '100%',
-    maxWidth: 380,
-  },
-  modalContenido: {
-    padding: spacing.cardPadding,
-  },
-  modalCabecera: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  modalTitulo: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  modalScroll: {
-    maxHeight: 420,
-  },
-  modalAyuda: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: spacing.md,
-  },
-  grupoEtiqueta: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    letterSpacing: 0.4,
-    marginBottom: spacing.sm,
-  },
-  grupoChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  opcion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: spacing.borderRadiusSm,
-    backgroundColor: colors.surfaceInset,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-  },
-  opcionActiva: {
-    backgroundColor: colors.glassBgLight,
-    borderColor: colors.glassBorderActive,
-  },
-  opcionTexto: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  opcionTextoActivo: {
-    color: colors.textPrimary,
-  },
-  modalBoton: {
-    width: '100%',
-  },
-});

@@ -1,44 +1,91 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  Pressable,
+  ActivityIndicator,
   FlatList,
-  Modal,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   Keyboard,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  TextInput,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { SpatialContainer } from '../../components/SpatialContainer';
-import { WelcomeModal } from '../../components/WelcomeModal';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, KeyboardEvents } from 'react-native-keyboard-controller';
+import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
 import { ChatBubble } from '../../components/ChatBubble';
 import { TypingIndicator } from '../../components/TypingIndicator';
-import { HologramAvatar } from '../../components/HologramAvatar';
-import { VoiceWave } from '../../components/VoiceWave';
 import { CrisisAlert } from '../../components/CrisisAlert';
 import { LocationPermissionModal } from '../../components/LocationPermissionModal';
-import { Glass, GlassScrim } from '../../components/Glass';
+import { WelcomeModal } from '../../components/WelcomeModal';
+import { PermisoMicrofono } from '../../components/PermisoMicrofono';
+import { Button, Icon, Txt } from '../../components/ui';
 import { colors } from '../../constants/colors';
 import { asistente } from '../../constants/asistente';
-import { spacing } from '../../constants/spacing';
-import { glassGlow } from '../../constants/glass';
+import { fonts } from '../../constants/typography';
 import { useChat } from '../../hooks/useChat';
 import { useDictado } from '../../hooks/useDictado';
+import { usePermisoMicrofono } from '../../hooks/usePermisoMicrofono';
+import { ANCHO_MAXIMO, useLayout } from '../../hooks/useLayout';
 import { storage } from '../../utils/storage';
 import { locationService } from '../../services/location';
-import { voz } from '../../services/voz';
-import { MentalHealthCenter } from '../../types/chat';
+import { diagnosticoService, ProgresoTest } from '../../services/diagnostico';
+import type { RootScreenProps } from '../../navigation/types';
+import type { ChatMessage, MentalHealthCenter } from '../../types/chat';
+import { ChatHeader } from './components/ChatHeader';
+import { CentrosSheet } from './components/CentrosSheet';
+import { AnotadoEnRegistro, ProgresoChequeo } from './components/ProgresoChequeo';
+import { AvisoDespertando } from '../../components/AvisoDespertando';
+import { SeparadorFecha, etiquetaFecha, necesitaSeparador } from './components/SeparadorFecha';
 
-export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+type Fila =
+  | { tipo: 'fecha'; key: string; etiqueta: string }
+  | { tipo: 'mensaje'; key: string; mensaje: ChatMessage };
+
+/** Intercala separadores "Hoy · 23:14" al cambiar de día o tras una pausa larga. */
+const conSeparadores = (mensajes: ChatMessage[]): Fila[] => {
+  const filas: Fila[] = [];
+  mensajes.forEach((m, i) => {
+    if (necesitaSeparador(m.timestamp, mensajes[i - 1]?.timestamp)) {
+      const etiqueta = etiquetaFecha(m.timestamp);
+      if (etiqueta) filas.push({ tipo: 'fecha', key: `fecha-${m.id}`, etiqueta });
+    }
+    filas.push({ tipo: 'mensaje', key: m.id, mensaje: m });
+  });
+  return filas;
+};
+
+/** Toque háptico ligero; en dispositivos sin motor háptico no hace nada. */
+const toque = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+};
+
+/** Distancia (px) al final de la lista por debajo de la cual se sigue "pegado" al último mensaje. */
+const UMBRAL_FINAL = 120;
+/** Separación entre la barra de entrada y el teclado. */
+const HOLGURA_BARRA = 10;
+/** Altura máxima del campo antes de desplazarse por dentro (≈ 5 líneas). */
+const ALTO_MAX_CAMPO = 120;
+/**
+ * iOS no presenta un Modal mientras otro se está cerrando: se espera a que
+ * termine la animación de salida antes de abrir el siguiente.
+ */
+const TRAS_CERRAR_MODAL_MS = 350;
+const trasCerrarModal = (fn: () => void) => setTimeout(fn, TRAS_CERRAR_MODAL_MS);
+/** Padding lateral de la conversación. */
+const MARGEN_LATERAL = 16;
+/** Proporción del ancho de contenido que puede ocupar una burbuja… */
+const PROPORCION_BURBUJA = 0.78;
+/** …con techo para que en tablet no salgan renglones de 500 px (≈ 60 caracteres). */
+const TECHO_BURBUJA = 440;
+/** Columna centrada en tablet: el fondo sigue a pantalla completa. */
+const COLUMNA = { width: '100%', maxWidth: ANCHO_MAXIMO, alignSelf: 'center' } as const;
+
+export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, route }) => {
   const {
     messages,
     loading,
-    currentEmotion,
+    restaurando,
     protocoloCrisisActivo,
     testCompleto,
     resultado,
@@ -48,115 +95,170 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     clearUbicacionSolicitada,
   } = useChat();
 
-  const [inputMessage, setInputMessage] = useState('');
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [nearbyCenters, setNearbyCenters] = useState<MentalHealthCenter[]>([]);
-  const [showCentersModal, setShowCentersModal] = useState(false);
-  const [voiceCall, setVoiceCall] = useState(false);
-  const [hablando, setHablando] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  const flatListRef = useRef<FlatList>(null);
-  const inputRef = useRef<TextInput>(null);
-  const voiceLoopRef = useRef(false);
+  const insets = useSafeAreaInsets();
+  const { anchoContenido, ios } = useLayout();
   const dictado = useDictado();
+  const permiso = usePermisoMicrofono();
 
+  const [texto, setTexto] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showCentros, setShowCentros] = useState(false);
+  const [centros, setCentros] = useState<MentalHealthCenter[]>([]);
+  const [progreso, setProgreso] = useState<ProgresoTest | null>(null);
+  const [anotado, setAnotado] = useState(false);
+  const [pidiendoPermiso, setPidiendoPermiso] = useState(false);
+
+  const listRef = useRef<FlatList<Fila>>(null);
+  const inputRef = useRef<TextInput>(null);
+  const alFinalRef = useRef(true);
+  const registradosRef = useRef<number | null>(null);
+  const cancelarDictadoRef = useRef(dictado.cancelar);
+
+  useEffect(() => {
+    cancelarDictadoRef.current = dictado.cancelar;
+  }, [dictado.cancelar]);
+
+  const filas = useMemo(() => conSeparadores(messages), [messages]);
+
+  const irAlFinal = useCallback((animated = true) => {
+    listRef.current?.scrollToEnd({ animated });
+  }, []);
+
+  // Bienvenida la primera vez.
   useEffect(() => {
     storage.isOnboarded().then((done) => {
       if (!done) setShowWelcome(true);
     });
   }, []);
 
-  // Control Keyboard state for dynamic bottom padding
+  // Al abrir el teclado se muestra el último mensaje (eventos de keyboard-controller:
+  // fiables también en Android edge-to-edge).
   useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
+    const sub = KeyboardEvents.addListener('keyboardDidShow', () => {
+      alFinalRef.current = true;
+      irAlFinal();
+    });
+    return () => sub.remove();
+  }, [irAlFinal]);
+
+  // Desde Voz se entra (o se vuelve con `popTo('Chat', { enfocar: true })`, sin
+  // remontar la pantalla) con el teclado arriba. Se observa el parámetro y se
+  // enfoca al terminar la transición (un `autoFocus` durante la animación falla en
+  // Android); luego se limpia para no reenfocar en cada visita.
+  const enfocar = route.params?.enfocar === true;
+  useEffect(() => {
+    if (!enfocar) return;
+    let hecho = false;
+    const enfocarYa = () => {
+      if (hecho) return;
+      hecho = true;
+      inputRef.current?.focus();
+      navigation.setParams({ enfocar: undefined });
+    };
+    const unsub = navigation.addListener('transitionEnd', (e) => {
+      if (!e.data.closing) enfocarYa();
+    });
+    // Respaldo si no llega `transitionEnd` (sin animación o ya terminada).
+    const t = setTimeout(enfocarYa, 500);
     return () => {
-      showSub.remove();
-      hideSub.remove();
+      unsub();
+      clearTimeout(t);
+    };
+  }, [enfocar, navigation]);
+
+  // Al salir no debe quedar el micrófono abierto.
+  useEffect(() => {
+    return () => {
+      cancelarDictadoRef.current();
     };
   }, []);
 
-  // Auto scroll to bottom when messages update
+  // Avance del chequeo: se consulta al entrar y cada vez que la asistente responde.
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages, loading]);
+    if (loading) return;
+    let activo = true;
 
-  // Navigate to ResultScreen when test finishes
+    const cargar = async () => {
+      // `await` de entrada; sin ficha (o sin backend) no se muestra la tarjeta.
+      const ficha = await diagnosticoService.obtener().catch(() => null);
+      if (!activo || !ficha) return;
+      const previo = registradosRef.current;
+      registradosRef.current = ficha.progreso.registrados;
+      setProgreso(ficha.progreso);
+      if (previo !== null && ficha.progreso.registrados > previo) setAnotado(true);
+    };
+
+    cargar();
+    return () => {
+      activo = false;
+    };
+  }, [loading]);
+
+  // Desplazarse al final cuando llega algo nuevo.
+  useEffect(() => {
+    const t = setTimeout(() => irAlFinal(), 100);
+    return () => clearTimeout(t);
+  }, [messages, loading, anotado, irAlFinal]);
+
+  // Al completar el chequeo se abre el resultado.
   useEffect(() => {
     if (testCompleto && resultado) {
       navigation.navigate('Result', { resultado });
     }
   }, [testCompleto, resultado, navigation]);
 
-  // En modo voz: cuando termina de hablar, inicia grabación automáticamente
-  const iniciarGrabacionSiAplica = React.useCallback(async () => {
-    if (!voiceLoopRef.current) return;
-    setHablando(false);
-    await dictado.cancelar();
-    // Preparar antes de capturar evita que se coman las primeras sílabas.
-    await dictado.preparar();
-    await dictado.iniciar();
-  }, [dictado]);
-
-  // Cuando se activa modo voz
-  useEffect(() => {
-    if (!voiceCall) return;
-    voiceLoopRef.current = true;
-
-    const ultimo = messages.length > 0 ? messages[messages.length - 1] : null;
-    const ultimoAsistente = ultimo?.role === 'assistant' ? ultimo : null;
-    if (!ultimoAsistente) {
-      iniciarGrabacionSiAplica();
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHablando(true);
-    voz.hablar(ultimoAsistente.content, iniciarGrabacionSiAplica);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voiceCall]);
-
-  // En modo voz: cuando llega un mensaje NUEVO del asistente, lo lee en alto
-  useEffect(() => {
-    if (!voiceCall) return;
-    if (messages.length === 0) return;
-
-    const ultimo = messages[messages.length - 1];
-    if (ultimo.role !== 'assistant') return;
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHablando(true);
-    voz.hablar(ultimo.content, iniciarGrabacionSiAplica);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
-
-  // Al salir de la pantalla no debe quedar voz sonando de fondo.
-  useEffect(() => {
-    return () => {
-      voz.callar();
-    };
-  }, []);
-
-  const handleSend = () => {
-    if (!inputMessage.trim() || loading) return;
-    const text = inputMessage;
-    setInputMessage('');
-    sendMessage(text);
+  const alDesplazar = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    alFinalRef.current =
+      contentSize.height - layoutMeasurement.height - contentOffset.y < UMBRAL_FINAL;
   };
 
+  const enviar = () => {
+    const limpio = texto.trim();
+    if (!limpio || loading) return;
+    toque();
+    setTexto('');
+    setAnotado(false);
+    alFinalRef.current = true;
+    sendMessage(limpio);
+  };
+
+  // Dictado: graba, transcribe en el backend y rellena el campo para revisar antes de enviar.
+  const empezarDictado = async () => {
+    const ok = await dictado.iniciar();
+    if (ok) toque();
+  };
+
+  const alternarDictado = async () => {
+    if (dictado.transcribiendo) return;
+    if (dictado.grabando) {
+      toque();
+      const dicho = await dictado.detenerYTranscribir();
+      if (dicho) setTexto((prev) => (prev.trim() ? `${prev.trim()} ${dicho}` : dicho));
+      return;
+    }
+    // Se explica para qué es el micrófono antes del diálogo del sistema.
+    if (permiso.estado !== 'concedido') {
+      Keyboard.dismiss(); // deja sitio a la explicación en pantallas bajas
+      setPidiendoPermiso(true);
+      return;
+    }
+    await empezarDictado();
+  };
+
+  const concederMicrofono = async () => {
+    if (await permiso.pedir()) {
+      setPidiendoPermiso(false);
+      await empezarDictado();
+    }
+  };
+
+  const tarjetaPermiso =
+    pidiendoPermiso && (permiso.estado === 'bloqueado' ? 'bloqueado' : 'pendiente');
+  const mostrarTarjetaPermiso = pidiendoPermiso && permiso.estado !== 'concedido';
+
+  // --- Ubicación (la pide el backend en crisis, o el usuario desde el aviso) ---
   const locationModalVisible = showLocationModal || ubicacionSolicitada;
 
   const cerrarLocationModal = () => {
@@ -164,167 +266,329 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     clearUbicacionSolicitada();
   };
 
-  const handleGrantLocation = async () => {
+  const mostrarCentros = () => {
+    setCentros(locationService.getNearbyCenters());
+    setShowCentros(true);
+  };
+
+  const concederUbicacion = async () => {
     cerrarLocationModal();
     const loc = await locationService.getCurrentLocation();
-    const centers = locationService.getNearbyCenters();
-    setNearbyCenters(centers);
-    setShowCentersModal(true);
-
+    trasCerrarModal(mostrarCentros);
     if (loc) {
       sendMessage('He compartido mi ubicación para buscar centros cercanos.', loc.lat, loc.lon);
     }
   };
 
-  const handleDenyLocation = () => {
+  const denegarUbicacion = () => {
     cerrarLocationModal();
-    const centers = locationService.getNearbyCenters();
-    setNearbyCenters(centers);
-    setShowCentersModal(true);
+    trasCerrarModal(mostrarCentros);
   };
 
-  const canSend = Boolean(inputMessage.trim()) && !loading;
-
-  // --- Modo voz ---------------------------------------------------------
-  const alternarEscucha = async () => {
-    if (dictado.grabando) {
-      const texto = await dictado.detenerYTranscribir();
-      if (texto) sendMessage(texto);
-      return;
-    }
-    await voz.callar();
-    setHablando(false);
-    await dictado.iniciar();
+  // Desde el aviso de crisis: se cierra el aviso (sigue a un toque en "Ayuda ya") y luego
+  // se pregunta por la ubicación; dos Modal a la vez fallan en iOS.
+  const pedirUbicacionDesdeCrisis = () => {
+    closeCrisisModal();
+    trasCerrarModal(() => setShowLocationModal(true));
   };
 
-  const cerrarModoVoz = async () => {
-    voiceLoopRef.current = false;
-    await dictado.cancelar();
-    await voz.callar();
-    setHablando(false);
-    setVoiceCall(false);
+  const abrirProtocolo = () => {
+    closeCrisisModal();
+    navigation.navigate('CrisisProtocol');
   };
 
-  const estadoVoz = dictado.grabando
-    ? 'Te escucho... toca para enviar'
+  const volver = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('MainApp', { screen: 'InicioTab' });
+  };
+
+  const puedeEnviar = Boolean(texto.trim()) && !loading;
+  const mostrarProgreso =
+    !!progreso &&
+    !testCompleto &&
+    progreso.registrados > 0 &&
+    progreso.registrados < progreso.total;
+
+  // Ancho de burbuja proporcional al contenido (360 px → 253, 430 px → 310), con techo.
+  const anchoBurbuja = Math.min(
+    TECHO_BURBUJA,
+    Math.round((anchoContenido - MARGEN_LATERAL * 2) * PROPORCION_BURBUJA)
+  );
+
+  const renderFila = ({ item }: { item: Fila }) =>
+    item.tipo === 'fecha' ? (
+      <SeparadorFecha etiqueta={item.etiqueta} />
+    ) : (
+      <ChatBubble message={item.mensaje} anchoMaximo={anchoBurbuja} />
+    );
+
+  // Respuesta al toque: onda sutil en Android, opacidad en iOS.
+  const rippleClaro = { color: colors.ripple, foreground: true } as const;
+
+  const estadoDictado = dictado.grabando
+    ? 'Te escucho… toca el micrófono para terminar'
     : dictado.transcribiendo
-      ? 'Transcribiendo...'
-      : loading
-        ? 'Pensando...'
-        : hablando
-          ? 'Hablando...'
-          : 'Toca para hablar';
+      ? 'Transcribiendo…'
+      : dictado.error;
+
+  /*
+   * Barra de entrada sobre la safe area y sobre el teclado, sin hueco doble.
+   *
+   * El KeyboardAvoidingView de keyboard-controller añade como padding inferior
+   *   (y + alto del KAV) − (altoPantalla − altoTeclado − keyboardVerticalOffset).
+   * El KAV termina en el borde inferior de la pantalla (SafeAreaView sin `bottom`
+   * a pantalla completa: iOS siempre, Android porque SDK 56+ es edge-to-edge),
+   * así que el padding es `altoTeclado + offset`.
+   *
+   * `altoTeclado` se mide desde el borde inferior de la pantalla en ambos
+   * sistemas: en iOS incluye la zona del home indicator; en Android incluye la
+   * barra de gestos o de 3 botones porque `KeyboardProvider` va con
+   * `navigationBarTranslucent` (si no, keyboard-controller le restaría la barra).
+   *
+   * La barra reserva siempre `holguraInferior` (= inset inferior: home
+   * indicator ≈ 34, gestos Android ≈ 16–24, 3 botones ≈ 48, o 8 si no hay) para
+   * no quedar bajo esa zona con el teclado cerrado. Con el teclado abierto esa
+   * reserva ya está "dentro" del alto del teclado, por eso el offset es
+   * `-holguraInferior`: padding = altoTeclado − holgura, y la píldora queda a
+   * altoTeclado − holgura + holgura + HOLGURA_BARRA = altoTeclado + 10 px del
+   * borde, es decir, a 10 px del teclado en iPhone con/sin home indicator y en
+   * Android con gestos o con 3 botones. Con offset 0 aparecería un hueco del
+   * tamaño de la safe area entre el teclado y la barra.
+   */
+  const holguraInferior = Math.max(insets.bottom, 8);
 
   return (
-    <SpatialContainer variant={protocoloCrisisActivo ? 'crisis' : 'normal'}>
+    <SafeAreaView
+      edges={['top', 'left', 'right']}
+      style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar style="dark" />
       <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-        <View style={[styles.container, { paddingBottom: keyboardVisible ? 10 : 80 }]}>
-          {/* Header */}
-          <Glass
-            level="low"
-            radius={0}
-            borderColor="transparent"
-            highlight={false}
-            contentStyle={styles.hero}>
-            <HologramAvatar
-              emotion={currentEmotion}
-              typing={loading}
-              voiceMode={false}
-              size="sm"
-              onPress={() => setShowProfileModal(true)}
-            />
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>{asistente.nombre}</Text>
-              <Text style={styles.heroStatus}>{loading ? 'escribiendo...' : 'en línea'}</Text>
-            </View>
-          </Glass>
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={-holguraInferior}>
+        <ChatHeader
+          escribiendo={loading}
+          onBack={volver}
+          onVoz={() => navigation.navigate('Voz')}
+          onAyuda={() => navigation.navigate('CrisisProtocol')}
+        />
 
-          {/* Messages list */}
+        {mostrarProgreso && (
+          <View style={[COLUMNA, { paddingHorizontal: MARGEN_LATERAL, paddingTop: 12 }]}>
+            <ProgresoChequeo progreso={progreso} />
+          </View>
+        )}
+
+        {restaurando ? (
+          <View
+            style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}
+            accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.forest} />
+            <Txt size={13.5} color={colors.inkSoft}>
+              Recuperando tu conversación…
+            </Txt>
+          </View>
+        ) : (
           <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ChatBubble message={item} />}
-            contentContainerStyle={styles.messageList}
-            showsVerticalScrollIndicator={false}
+            ref={listRef}
+            data={filas}
+            keyExtractor={(f) => f.key}
+            renderItem={renderFila}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+            // La lista ocupa todo el ancho (se desplaza tocando en cualquier sitio);
+            // su contenido es una columna centrada de ANCHO_MAXIMO en tablet.
+            contentContainerStyle={[
+              COLUMNA,
+              {
+                flexGrow: 1,
+                justifyContent: 'flex-end',
+                paddingTop: 16,
+                paddingHorizontal: MARGEN_LATERAL,
+                paddingBottom: 12,
+              },
+            ]}
             ListFooterComponent={
-              <>
-                {loading ? <TypingIndicator /> : null}
-                <View style={{ height: 20 }} />
-              </>
+              loading || anotado ? (
+                <View style={{ paddingTop: 12, gap: 12 }}>
+                  {anotado && (
+                    <AnotadoEnRegistro
+                      onPress={() => navigation.navigate('MainApp', { screen: 'RegistroTab' })}
+                    />
+                  )}
+                  {loading && <TypingIndicator />}
+                  <AvisoDespertando activo={loading} align="left" />
+                </View>
+              ) : null
             }
+            onScroll={alDesplazar}
+            scrollEventThrottle={100}
+            onContentSizeChange={() => {
+              if (alFinalRef.current) irAlFinal(false);
+            }}
+            // La lista se encoge mientras sube el teclado: se mantiene pegada al final.
+            onLayout={() => {
+              if (alFinalRef.current) irAlFinal(false);
+            }}
+            keyboardShouldPersistTaps="handled"
+            // 'interactive' sólo existe en iOS; en Android el teclado se cierra al arrastrar.
+            keyboardDismissMode={ios ? 'interactive' : 'on-drag'}
+            showsVerticalScrollIndicator={false}
           />
+        )}
 
-          {protocoloCrisisActivo && (
-            <CrisisAlert
-              onClose={closeCrisisModal}
-              onRequestLocation={() => setShowLocationModal(true)}
-            />
-          )}
+        {/* Barra de entrada: fondo y borde a todo el ancho, controles en la columna centrada. */}
+        <View
+          style={{
+            flexShrink: 0,
+            paddingTop: HOLGURA_BARRA,
+            paddingBottom: holguraInferior + HOLGURA_BARRA,
+            borderTopWidth: 1,
+            borderTopColor: colors.divider,
+            backgroundColor: colors.background,
+          }}>
+          <View style={[COLUMNA, { paddingHorizontal: 12, gap: 8 }]}>
+            {mostrarTarjetaPermiso && tarjetaPermiso ? (
+              <View style={{ gap: 4 }}>
+                <PermisoMicrofono
+                  estado={tarjetaPermiso}
+                  onPedir={concederMicrofono}
+                  onAbrirAjustes={permiso.abrirAjustes}
+                />
+                <Button
+                  label="Ahora no"
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => setPidiendoPermiso(false)}
+                />
+              </View>
+            ) : null}
 
-          {/* Input Bar */}
-          <View style={styles.inputBar}>
-            <Pressable
-              style={[
-                styles.inputWrapper,
-                inputFocused && styles.inputWrapperFocused,
-                inputFocused && glassGlow(colors.primary, 12),
-              ]}
-              onPress={() => inputRef.current?.focus()}>
-              <TextInput
-                ref={inputRef}
-                style={styles.input}
-                placeholder={
-                  loading ? `${asistente.nombre} está pensando...` : 'Cuéntame cómo te sientes...'
-                }
-                placeholderTextColor={colors.textMuted}
-                value={inputMessage}
-                onChangeText={setInputMessage}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                multiline
-                maxLength={1000}
-                editable={!loading}
-                textAlignVertical="center"
-              />
-            </Pressable>
+            {estadoDictado ? (
+              <Txt
+                size={12.5}
+                color={dictado.error && !dictado.grabando ? colors.dangerInk : colors.inkSoft}
+                align="center"
+                accessibilityLiveRegion="polite">
+                {estadoDictado}
+              </Txt>
+            ) : null}
 
-            {/* Action buttons row with clean separation */}
-            <View style={styles.actionButtonsRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+              {/* Toda la píldora enfoca el campo (no sólo la línea del texto). */}
               <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Hablar por voz"
-                style={({ pressed }) => [styles.micBtn, pressed && styles.pressed]}
-                onPress={() => setVoiceCall(true)}>
-                <Ionicons name="mic-outline" size={20} color={colors.primary} />
+                onPress={() => inputRef.current?.focus()}
+                accessible={false}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: 48,
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: 18,
+                  justifyContent: 'center',
+                }}>
+                <TextInput
+                  ref={inputRef}
+                  value={texto}
+                  onChangeText={setTexto}
+                  placeholder={
+                    loading ? `${asistente.nombre} está escribiendo…` : 'Escribe lo que sientes…'
+                  }
+                  placeholderTextColor={colors.inkSoft}
+                  accessibilityLabel="Mensaje"
+                  accessibilityHint="Escribe y pulsa Enviar"
+                  multiline
+                  maxLength={1000}
+                  autoCapitalize="sentences"
+                  autoCorrect
+                  autoComplete="off"
+                  textContentType="none"
+                  // Multilínea: Intro hace salto de línea; se envía con el botón.
+                  returnKeyType="default"
+                  submitBehavior="newline"
+                  enablesReturnKeyAutomatically
+                  // Mismo techo que `Txt`/`TextField`: respeta la fuente del sistema sin romper la píldora.
+                  maxFontSizeMultiplier={1.35}
+                  style={{
+                    maxHeight: ALTO_MAX_CAMPO,
+                    paddingTop: 12,
+                    paddingBottom: 12,
+                    paddingHorizontal: 0,
+                    fontFamily: fonts.regular,
+                    fontSize: 15,
+                    lineHeight: 20,
+                    color: colors.ink,
+                    textAlignVertical: 'center',
+                  }}
+                />
               </Pressable>
 
               <Pressable
+                onPress={alternarDictado}
+                disabled={dictado.transcribiendo}
                 accessibilityRole="button"
-                accessibilityLabel="Enviar mensaje"
-                accessibilityState={{ disabled: !canSend }}
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  canSend && styles.sendButtonActive,
-                  canSend && glassGlow(colors.primary, 14),
-                  pressed && canSend && styles.pressed,
-                ]}
-                onPress={handleSend}
-                disabled={!canSend}>
-                <Ionicons
-                  name="send"
-                  size={18}
-                  style={styles.sendIcon}
-                  color={canSend ? colors.white : colors.textMuted}
-                />
+                accessibilityLabel={
+                  dictado.grabando ? 'Terminar de dictar' : 'Dictar mensaje por voz'
+                }
+                accessibilityState={{ busy: dictado.transcribiendo, selected: dictado.grabando }}
+                android_ripple={rippleClaro}
+                style={({ pressed }) => ({
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  overflow: 'hidden', // recorta la onda de Android al círculo
+                  backgroundColor: dictado.grabando ? colors.forest : colors.surface,
+                  borderWidth: dictado.grabando ? 0 : 1,
+                  borderColor: colors.border,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  opacity: ios && pressed ? 0.8 : 1,
+                })}>
+                {dictado.transcribiendo ? (
+                  <ActivityIndicator color={colors.forest} />
+                ) : (
+                  <Icon
+                    name={dictado.grabando ? 'stop' : 'mic'}
+                    size={20}
+                    color={dictado.grabando ? colors.onDark : colors.ink}
+                  />
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={enviar}
+                disabled={!puedeEnviar}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar"
+                accessibilityState={{ disabled: !puedeEnviar }}
+                android_ripple={{ color: colors.rippleOnDark, foreground: true }}
+                style={({ pressed }) => ({
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  backgroundColor: colors.ink,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  opacity: !puedeEnviar ? 0.45 : ios && pressed ? 0.85 : 1,
+                })}>
+                <Icon name="arrowUp" size={18} color={colors.onDark} strokeWidth={2} />
               </Pressable>
             </View>
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <CrisisAlert
+        visible={protocoloCrisisActivo}
+        onClose={closeCrisisModal}
+        onRequestLocation={pedirUbicacionDesdeCrisis}
+        onOpenProtocol={abrirProtocolo}
+      />
 
       <WelcomeModal
         visible={showWelcome}
@@ -334,405 +598,13 @@ export const ChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         }}
       />
 
-      {voiceCall && (
-        <View style={styles.voiceOverlay}>
-          <LinearGradient
-            colors={colors.spaceGradient}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar modo voz"
-            style={({ pressed }) => [styles.closeVoiceBtn, pressed && styles.pressed]}
-            onPress={cerrarModoVoz}>
-            <Ionicons name="close" size={22} color={colors.textPrimary} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={dictado.grabando ? 'Enviar lo que dijiste' : 'Empezar a hablar'}
-            onPress={alternarEscucha}
-            disabled={dictado.transcribiendo || loading}
-            style={styles.voiceTapArea}>
-            <VoiceWave speaking={dictado.grabando || hablando} />
-            <Text style={styles.voiceTitle}>{asistente.nombre}</Text>
-            <Text style={styles.voiceStatus}>{estadoVoz}</Text>
-          </Pressable>
-          {dictado.error ? <Text style={styles.voiceError}>{dictado.error}</Text> : null}
-        </View>
-      )}
-
-      {/* Profile Modal */}
-      <Modal visible={showProfileModal} transparent animationType="fade" statusBarTranslucent>
-        <View style={styles.profileOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowProfileModal(false)} />
-          <View style={styles.profileCard}>
-            <Pressable
-              style={styles.profileClose}
-              onPress={() => setShowProfileModal(false)}
-              hitSlop={12}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </Pressable>
-            <View style={styles.profileAvatarWrap}>
-              <HologramAvatar emotion={currentEmotion} size="lg" />
-            </View>
-            <Text style={styles.profileName}>{asistente.nombre}</Text>
-            <Text style={styles.profileStatus}>en línea</Text>
-            <Text style={styles.profileDesc}>
-              Tu acompañante personal para el bienestar emocional. Estoy aquí para escucharte,
-              apoyarte y guiarte en tu proceso, sin prisas ni juicios.
-            </Text>
-            <View style={styles.profileDivider} />
-            <View style={styles.profileInfoRow}>
-              <Ionicons name="shield-checkmark-outline" size={18} color={colors.secondary} />
-              <Text style={styles.profileInfoText}>Conversaciones 100% confidenciales</Text>
-            </View>
-            <View style={styles.profileInfoRow}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.tertiary} />
-              <Text style={styles.profileInfoText}>Evaluación basada en la escala de Hamilton</Text>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Location Permission Request Modal */}
       <LocationPermissionModal
         visible={locationModalVisible}
-        onGrant={handleGrantLocation}
-        onDeny={handleDenyLocation}
+        onGrant={concederUbicacion}
+        onDeny={denegarUbicacion}
       />
 
-      {/* Nearby Centers Modal */}
-      <Modal visible={showCentersModal} transparent animationType="slide" statusBarTranslucent>
-        <GlassScrim style={styles.sheetScrim}>
-          <Glass
-            level="high"
-            style={styles.sheet}
-            radiusStyle={styles.sheetRadius}
-            contentStyle={styles.sheetContent}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Centros de Salud Mental en Cusco</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Cerrar"
-                hitSlop={8}
-                onPress={() => setShowCentersModal(false)}
-                style={({ pressed }) => pressed && styles.pressed}>
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView style={styles.centersList}>
-              {nearbyCenters.map((center) => (
-                <View key={center.id} style={styles.centerItem}>
-                  <Text style={styles.centerName}>{center.nombre}</Text>
-                  <View style={styles.centerRow}>
-                    <Ionicons name="navigate-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.centerAddress}> {center.direccion}</Text>
-                  </View>
-                  <View style={styles.centerRow}>
-                    <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.centerHours}> {center.horario}</Text>
-                  </View>
-                  <View style={styles.centerRow}>
-                    <Ionicons name="call-outline" size={14} color={colors.accent} />
-                    <Text style={styles.centerPhone}> {center.telefono}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </Glass>
-        </GlassScrim>
-      </Modal>
-    </SpatialContainer>
+      <CentrosSheet visible={showCentros} centros={centros} onClose={() => setShowCentros(false)} />
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  keyboardAvoid: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDark,
-  },
-  heroInfo: {
-    marginLeft: spacing.sm + 2,
-  },
-  heroName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  heroStatus: {
-    fontSize: 12,
-    color: colors.accent,
-    marginTop: 1,
-  },
-  messageList: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.md,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.sm + 2,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderDark,
-    backgroundColor: colors.surfaceLow,
-  },
-  inputWrapper: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderColor: colors.borderDark,
-    borderWidth: 1,
-    borderRadius: spacing.borderRadiusXl,
-    minHeight: 46,
-    justifyContent: 'center',
-  },
-  inputWrapperFocused: {
-    borderColor: colors.glassBorderActive,
-  },
-  input: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    color: colors.textPrimary,
-    fontSize: 15,
-    maxHeight: 100,
-    textAlignVertical: 'center',
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: spacing.sm,
-    gap: 8,
-  },
-  micBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.glassBg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.glassBg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  sendIcon: {
-    marginLeft: 2,
-  },
-  voiceOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeVoiceBtn: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  voiceTapArea: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  voiceTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginTop: 40,
-  },
-  voiceStatus: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-  voiceError: {
-    position: 'absolute',
-    bottom: 60,
-    left: spacing.xl,
-    right: spacing.xl,
-    textAlign: 'center',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.danger,
-  },
-
-  sheetScrim: {
-    justifyContent: 'flex-end',
-    padding: 0,
-  },
-  sheet: {
-    width: '100%',
-    maxHeight: '80%',
-  },
-  sheetRadius: {
-    borderTopLeftRadius: spacing.borderRadiusXl,
-    borderTopRightRadius: spacing.borderRadiusXl,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  sheetContent: {
-    padding: spacing.screenPadding,
-    paddingBottom: spacing.xl,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.outlineVariant,
-    marginBottom: spacing.md,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    flexShrink: 1,
-    marginRight: spacing.sm,
-  },
-  centerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  centersList: {
-    marginBottom: spacing.md,
-  },
-  centerItem: {
-    backgroundColor: colors.surfaceInset,
-    padding: spacing.md,
-    borderRadius: spacing.borderRadiusMd,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-  },
-  centerName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  centerAddress: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  centerHours: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
-  centerPhone: {
-    fontSize: 13,
-    color: colors.accent,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-
-  // Profile Modal
-  profileOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(6, 14, 32, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.screenPadding,
-  },
-  profileCard: {
-    width: '100%',
-    backgroundColor: '#1a1a30',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.screenPadding,
-  },
-  profileClose: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.sm,
-  },
-  profileAvatarWrap: {
-    marginBottom: spacing.md,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  profileStatus: {
-    fontSize: 14,
-    color: colors.accent,
-    marginTop: 2,
-    marginBottom: spacing.md,
-  },
-  profileDesc: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  profileDivider: {
-    width: '80%',
-    height: 1,
-    backgroundColor: colors.borderDark,
-    marginBottom: spacing.md,
-  },
-  profileInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    gap: 10,
-  },
-  profileInfoText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-});

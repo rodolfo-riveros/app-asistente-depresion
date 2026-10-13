@@ -1,404 +1,325 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, Linking, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Clipboard from 'expo-clipboard';
-import { SpatialContainer } from '../../components/SpatialContainer';
-import { GlassCard } from '../../components/GlassCard';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AppState, Linking, Pressable, View } from 'react-native';
+import * as Location from 'expo-location';
+import { Button, Card, Icon, IconButton, IconTile, Screen, Title, Txt } from '../../components/ui';
 import { colors } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
-import { CUSCO_HEALTH_CENTERS, locationService } from '../../services/location';
+import { radius, sizes } from '../../constants/spacing';
+import { lineaAyuda } from '../../constants/asistente';
+import type { RootScreenProps } from '../../navigation/types';
+import { useLayout } from '../../hooks/useLayout';
+import { CUSCO_HEALTH_CENTERS } from '../../services/location';
 import { MentalHealthCenter } from '../../types/chat';
+import { abrirMapa, copiarNumero, llamar } from '../recursos/enlaces';
 
-export const CrisisProtocolScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [centers] = useState<MentalHealthCenter[]>(CUSCO_HEALTH_CENTERS);
-  const [loadingLoc, setLoadingLoc] = useState(false);
+type Coordenadas = { lat: number; lon: number };
+/**
+ * - `denegado`: dijo que no, pero se puede volver a preguntar.
+ * - `bloqueado`: el sistema ya no muestra el diálogo → sólo desde Ajustes.
+ * - `sin-senal`: permiso concedido pero el GPS está apagado o no responde.
+ */
+type EstadoUbicacion = 'inicial' | 'buscando' | 'lista' | 'denegado' | 'bloqueado' | 'sin-senal';
 
-  const handleCall = (number: string) => {
-    Linking.openURL(`tel:${number}`).catch(() => {
-      Alert.alert('Llamada', `Inicia la llamada marcando al ${number}`);
-    });
-  };
+/** Sin red el GPS puede tardar mucho: pasado este plazo se usa la última posición conocida. */
+const PLAZO_UBICACION_MS = 12000;
 
-  const handleCopy = async (text: string) => {
-    await Clipboard.setStringAsync(text);
-    Alert.alert('Copiado', `Número ${text} copiado al portapapeles.`);
-  };
+/** Resuelve `null` si la promesa no termina a tiempo (sin dejar el temporizador colgado). */
+const conPlazo = <T,>(promesa: Promise<T>, ms: number): Promise<T | null> => {
+  let id: ReturnType<typeof setTimeout> | undefined;
+  const plazo = new Promise<null>((resolve) => {
+    id = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([promesa, plazo]).finally(() => clearTimeout(id));
+};
 
-  const handleOpenMap = (center: MentalHealthCenter) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${center.lat},${center.lon}`;
-    Linking.openURL(url).catch(() => {
-      Alert.alert('Mapa', `No se pudo abrir el mapa para ${center.nombre}`);
-    });
-  };
+/** Distancia en km entre dos puntos (fórmula del haversine). */
+const distanciaKm = (a: Coordenadas, b: Coordenadas) => {
+  const rad = (g: number) => (g * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+};
 
-  const handleRequestLocation = async () => {
-    setLoadingLoc(true);
-    const loc = await locationService.getCurrentLocation();
-    setLoadingLoc(false);
-    if (loc) {
-      Alert.alert(
-        'Ubicación obtenida',
-        'Mostrando centros de salud mental cercanos a ti en Cusco.'
-      );
-    } else {
-      Alert.alert('Ubicación no disponible', 'Mostrando lista general de centros en Cusco.');
+const formatoKm = (km: number) =>
+  km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 1 : 0)} km`;
+
+const AVISOS_UBICACION: Partial<Record<EstadoUbicacion, string>> = {
+  inicial:
+    'Si lo permites, tu ubicación se usa sólo en este teléfono para ordenar los centros por cercanía. No se guarda ni se envía.',
+  lista: 'Ordenados del más cercano al más lejano según tu ubicación.',
+  denegado: 'Sin permiso de ubicación te mostramos la lista general de Cusco.',
+  bloqueado:
+    'El permiso de ubicación está desactivado para esta app. Puedes activarlo en Ajustes; mientras tanto, esta es la lista general de Cusco.',
+  'sin-senal':
+    'No pudimos obtener tu ubicación (revisa que el GPS esté encendido). Te mostramos la lista general de Cusco.',
+};
+
+/**
+ * Protocolo de crisis. Es la pantalla más crítica: todo lo esencial (números,
+ * centros, direcciones) es local y funciona sin conexión.
+ */
+export const CrisisProtocolScreen: React.FC<RootScreenProps<'CrisisProtocol'>> = ({
+  navigation,
+}) => {
+  const { anchoContenido, fontScale } = useLayout();
+  /**
+   * Ancho "efectivo" con la fuente del sistema: en 360 px, o en cualquier
+   * teléfono con fuente al 130 %, "Llamar al 113" + "Copiar" no caben en fila
+   * → la llamada ocupa todo el ancho (un toque, sin cortes) y "Copiar" va debajo.
+   */
+  const apilar = anchoContenido / Math.min(Math.max(fontScale, 1), 1.35) < 380;
+  const fila = apilar ? ('column' as const) : ('row' as const);
+  const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
+  const [estadoUbicacion, setEstadoUbicacion] = useState<EstadoUbicacion>('inicial');
+  const buscando = estadoUbicacion === 'buscando';
+
+  const centros = useMemo(() => {
+    const base: (MentalHealthCenter & { km?: number })[] = CUSCO_HEALTH_CENTERS.map((c) => ({
+      ...c,
+      km: ubicacion ? distanciaKm(ubicacion, c) : undefined,
+    }));
+    return ubicacion ? base.sort((a, b) => (a.km ?? 0) - (b.km ?? 0)) : base;
+  }, [ubicacion]);
+
+  const pedirUbicacion = useCallback(async () => {
+    setEstadoUbicacion('buscando');
+    try {
+      let permiso = await Location.getForegroundPermissionsAsync();
+      if (!permiso.granted && permiso.canAskAgain) {
+        permiso = await Location.requestForegroundPermissionsAsync();
+      }
+      if (!permiso.granted) {
+        setEstadoUbicacion(permiso.canAskAgain ? 'denegado' : 'bloqueado');
+        return;
+      }
+      const pos =
+        (await conPlazo(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          PLAZO_UBICACION_MS
+        )) ?? (await Location.getLastKnownPositionAsync());
+      if (pos) {
+        setUbicacion({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setEstadoUbicacion('lista');
+      } else {
+        setEstadoUbicacion('sin-senal');
+      }
+    } catch {
+      // GPS apagado o servicio no disponible: la lista general sigue ahí.
+      setEstadoUbicacion('sin-senal');
     }
+  }, []);
+
+  // Si la persona fue a Ajustes y activó el permiso, al volver se ordena sola.
+  useEffect(() => {
+    if (estadoUbicacion !== 'bloqueado') return;
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado !== 'active') return;
+      Location.getForegroundPermissionsAsync()
+        .then((permiso) => {
+          if (permiso.granted) pedirUbicacion();
+        })
+        .catch(() => undefined);
+    });
+    return () => sub.remove();
+  }, [estadoUbicacion, pedirUbicacion]);
+
+  const abrirAjustes = () => {
+    Linking.openSettings().catch(() => undefined);
   };
+
+  const volver = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('MainApp');
+  };
+
+  const aviso = AVISOS_UBICACION[estadoUbicacion];
 
   return (
-    <SpatialContainer variant="crisis">
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.badge}>
-            <Ionicons name="shield-checkmark" size={13} color={colors.danger} />
-            <Text style={styles.badgeText}> Protocolo de Acompañamiento Prioritario</Text>
+    <Screen scroll gap={14} edges={['top', 'left', 'right', 'bottom']}>
+      {/* Cabecera */}
+      <View style={{ marginLeft: -10 }}>
+        <IconButton name="back" accessibilityLabel="Volver" onPress={volver} />
+      </View>
+      <View style={{ gap: 6 }}>
+        <Title>Estamos contigo</Title>
+        <Txt size={15} leading={1.45} color={colors.inkSoft}>
+          Si estás pasando por un momento muy difícil, no tienes que atravesarlo en soledad. Estas
+          líneas atienden gratis y con personas preparadas para escucharte.
+        </Txt>
+      </View>
+
+      {/* Línea 113: la llamada principal, a un toque */}
+      <Card tone="danger" gap={12}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <IconTile name="phone" bg={colors.surface} color={colors.dangerInk} strokeWidth={2} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt size={18} weight="bold" color={colors.dangerInk} accessibilityRole="header">
+              {lineaAyuda.etiqueta}
+            </Txt>
+            <Txt size={12.5} color={colors.dangerInkSoft}>
+              MINSA · Orientación psicológica, 24 horas
+            </Txt>
           </View>
-          <Text style={styles.title}>Queremos Ayudarte</Text>
-          <Text style={styles.subtitle}>
-            Tu vida y tu bienestar son invaluables. Si estás pasando por un momento muy difícil o
-            abrumador, por favor conecta con estas líneas de apoyo inmediato.
-          </Text>
         </View>
+        <Txt size={14} leading={1.45} color={colors.dangerInkSoft}>
+          Servicio gratuito de escucha y contención emocional atendido por psicólogos del Estado.
+          Marca 113 y elige la opción 5.
+        </Txt>
+        <View style={{ flexDirection: fila, gap: 8 }}>
+          <Button
+            label="Llamar al 113"
+            icon="phone"
+            size={apilar ? 'lg' : 'md'}
+            grow={!apilar}
+            accessibilityHint="Abre el teléfono con el 113. Luego elige la opción 5."
+            onPress={() => llamar(lineaAyuda.telefono)}
+          />
+          <Button
+            label="Copiar"
+            icon="copy"
+            variant="secondary"
+            size="md"
+            accessibilityHint="Copia el número 113"
+            onPress={() => copiarNumero(lineaAyuda.telefono)}
+          />
+        </View>
+      </Card>
 
-        {/* Guaranteed Line 113 */}
-        <GlassCard style={styles.hotlineCard} glowColor={colors.dangerBorder}>
-          <View style={styles.hotlineHeader}>
-            <Ionicons name="call-outline" size={24} color={colors.danger} />
-            <View style={styles.hotlineTitles}>
-              <Text style={styles.hotlineName}>Línea 113 (Opción 5)</Text>
-              <Text style={styles.hotlineSub}>MINSA Perú • Orientación Psicológica 24/7</Text>
-            </View>
+      {/* SAMU 106 */}
+      <Card gap={12}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <IconTile name="heart" bg={colors.peachPale} color={colors.ink} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt size={16} weight="bold" accessibilityRole="header">
+              SAMU 106
+            </Txt>
+            <Txt size={12.5} color={colors.inkSoft}>
+              Atención médica de urgencia · 24 horas
+            </Txt>
           </View>
-          <Text style={styles.hotlineDesc}>
-            Servicio gratuito de contención emocional, atención en crisis y salud mental atendido
-            por psicólogos del Estado.
-          </Text>
-          <View style={styles.btnRow}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.copyBtn, pressed && styles.pressed]}
-              onPress={() => handleCopy('113')}>
-              <Ionicons name="copy-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.copyBtnText}> Copiar 113</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.fillBtn, pressed && styles.pressed]}
-              onPress={() => handleCall('113')}>
-              <LinearGradient
-                colors={colors.dangerGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.fillBtnInner}>
-                <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
-                <Text style={styles.fillBtnText}> Llamar Gratis al 113</Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </GlassCard>
+        </View>
+        <Txt size={14} leading={1.45} color={colors.inkSoft}>
+          Si tu vida o la de otra persona corre peligro ahora mismo, llama al 106 o acude a la
+          emergencia más cercana.
+        </Txt>
+        <View style={{ flexDirection: fila, gap: 8 }}>
+          <Button
+            label="Llamar al 106"
+            icon="phone"
+            variant="outline"
+            size="md"
+            grow={!apilar}
+            onPress={() => llamar('106')}
+          />
+          <Button
+            label="Copiar"
+            icon="copy"
+            variant="outline"
+            size="md"
+            accessibilityHint="Copia el número 106"
+            onPress={() => copiarNumero('106')}
+          />
+        </View>
+      </Card>
 
-        {/* Emergency SAMU 106 */}
-        <GlassCard style={styles.hotlineCard} glowColor={colors.warning}>
-          <View style={styles.hotlineHeader}>
-            <Ionicons name="medkit-outline" size={24} color={colors.warning} />
-            <View style={styles.hotlineTitles}>
-              <Text style={styles.hotlineName}>SAMU 106</Text>
-              <Text style={styles.hotlineSub}>Sistema de Atención Médica de Urgencia</Text>
-            </View>
-          </View>
-          <Text style={styles.hotlineDesc}>
-            Atención médica de emergencia las 24 horas frente a situaciones de riesgo de vida
-            inmediato.
-          </Text>
-          <View style={styles.btnRow}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.fillBtn, pressed && styles.pressed]}
-              onPress={() => handleCall('106')}>
-              <LinearGradient
-                colors={colors.warningGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.fillBtnInner}>
-                <Ionicons name="call-outline" size={16} color={colors.onPrimary} />
-                <Text style={styles.fillBtnText}> Llamar 106</Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </GlassCard>
-
-        {/* Nearby Health Centers Cusco */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Centros de Salud Mental en Cusco</Text>
+      {/* Centros de salud mental */}
+      <View style={{ gap: 8, marginTop: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Txt
+            size={15}
+            weight="semibold"
+            accessibilityRole="header"
+            style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160 }}>
+            Centros de salud mental en Cusco
+          </Txt>
           <Pressable
+            onPress={pedirUbicacion}
+            disabled={buscando}
             accessibilityRole="button"
-            style={({ pressed }) => [styles.gpsBtn, pressed && styles.pressed]}
-            onPress={handleRequestLocation}
-            disabled={loadingLoc}>
-            {!loadingLoc && <Ionicons name="navigate-outline" size={14} color={colors.primary} />}
-            <Text style={styles.gpsBtnText}>{loadingLoc ? 'Buscando...' : ' Usar GPS'}</Text>
+            accessibilityLabel="Usar mi ubicación para ordenar los centros por cercanía"
+            accessibilityState={{ busy: buscando, disabled: buscando }}
+            style={({ pressed }) => ({
+              minHeight: sizes.touch,
+              paddingHorizontal: 12,
+              borderRadius: radius.full,
+              backgroundColor: colors.sage,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              opacity: pressed || buscando ? 0.7 : 1,
+            })}>
+            <Icon name="pin" size={16} color={colors.forest} strokeWidth={2} />
+            <Txt size={13} weight="semibold" color={colors.forest}>
+              {buscando ? 'Buscando…' : 'Usar mi ubicación'}
+            </Txt>
           </Pressable>
         </View>
+        {aviso ? (
+          <Txt size={12.5} color={colors.inkSoft} leading={1.4} accessibilityLiveRegion="polite">
+            {aviso}
+          </Txt>
+        ) : null}
+        {estadoUbicacion === 'bloqueado' && (
+          <Button
+            label="Abrir Ajustes"
+            variant="outline"
+            size="sm"
+            accessibilityHint="Abre los ajustes de la app para activar la ubicación"
+            onPress={abrirAjustes}
+          />
+        )}
 
-        {centers.map((c) => (
-          <GlassCard key={c.id} style={styles.centerCard}>
-            <Text style={styles.centerTitle}>{c.nombre}</Text>
-            <View style={styles.centerRow}>
-              <Ionicons name="navigate-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.centerAddress}> {c.direccion}</Text>
+        {centros.map((c) => (
+          <Card key={c.id} rounded={radius.lg} gap={10}>
+            <Txt size={15} weight="semibold">
+              {c.nombre}
+            </Txt>
+            <View style={{ gap: 6 }}>
+              <Fila icono="pin" texto={c.direccion} />
+              <Fila icono="clock" texto={c.horario} />
+              {c.km !== undefined && <Fila icono="arrowRight" texto={`A ${formatoKm(c.km)}`} />}
             </View>
-            <View style={styles.centerRow}>
-              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.centerHours}> {c.horario}</Text>
+            <View style={{ flexDirection: fila, gap: 8 }}>
+              <Button
+                label={c.telefono}
+                icon="phone"
+                variant="outline"
+                size="sm"
+                grow={!apilar}
+                accessibilityHint={`Llama a ${c.nombre}`}
+                onPress={() => llamar(c.telefono)}
+              />
+              <Button
+                label="Cómo llegar"
+                icon="pin"
+                variant="outline"
+                size="sm"
+                grow={!apilar}
+                accessibilityHint={`Abre ${c.nombre} en Google Maps`}
+                onPress={() => abrirMapa(c)}
+              />
             </View>
-
-            <View style={styles.centerBtnRow}>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.centerCallBtn, pressed && styles.pressed]}
-                onPress={() => handleCall(c.telefono)}>
-                <Ionicons name="call-outline" size={14} color={colors.accent} />
-                <Text style={styles.centerCallBtnText}> {c.telefono}</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.centerMapBtn, pressed && styles.pressed]}
-                onPress={() => handleOpenMap(c)}>
-                <Ionicons name="map-outline" size={14} color={colors.primary} />
-                <Text style={styles.centerMapBtnText}> Cómo Llegar</Text>
-              </Pressable>
-            </View>
-          </GlassCard>
+          </Card>
         ))}
+      </View>
 
-        {/* Return to Chat */}
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.returnBtn, pressed && styles.pressed]}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.returnBtnText}>Volver al chat</Text>
-        </Pressable>
-      </ScrollView>
-    </SpatialContainer>
+      <Button label="Volver" variant="outline" onPress={volver} style={{ marginTop: 8 }} />
+    </Screen>
   );
 };
 
-const styles = StyleSheet.create({
-  scrollContent: {
-    padding: spacing.screenPadding,
-    paddingBottom: 100,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    marginTop: spacing.md,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.dangerBg,
-    borderWidth: 1,
-    borderColor: colors.dangerBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    marginBottom: spacing.sm,
-  },
-  badgeText: {
-    color: colors.danger,
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    lineHeight: 20,
-  },
-  hotlineCard: {
-    marginBottom: spacing.md,
-  },
-  hotlineHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  centerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  hotlineTitles: {
-    flex: 1,
-    marginLeft: spacing.sm,
-  },
-  hotlineName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  hotlineSub: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  hotlineDesc: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-    marginVertical: spacing.xs,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: spacing.sm,
-  },
-  copyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: spacing.borderRadiusMd,
-    marginRight: 8,
-  },
-  copyBtnText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  fillBtn: {
-    borderRadius: spacing.borderRadiusMd,
-    overflow: 'hidden',
-  },
-  fillBtnInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    borderRadius: spacing.borderRadiusMd,
-  },
-  fillBtnText: {
-    color: colors.onPrimary,
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    flexShrink: 1,
-    marginRight: spacing.sm,
-  },
-  gpsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 1,
-    borderColor: colors.glassBorderActive,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  gpsBtnText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  centerCard: {
-    marginBottom: spacing.sm,
-  },
-  centerTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  centerAddress: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  centerHours: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  centerBtnRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  centerCallBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accentLight,
-    borderColor: colors.accent,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: spacing.borderRadiusMd,
-    flex: 1,
-    marginRight: 6,
-    justifyContent: 'center',
-  },
-  centerCallBtnText: {
-    color: colors.accent,
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  centerMapBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryContainer,
-    borderColor: colors.primary,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: spacing.borderRadiusMd,
-    flex: 1,
-    marginLeft: 6,
-    justifyContent: 'center',
-  },
-  centerMapBtnText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  returnBtn: {
-    backgroundColor: colors.surface,
-    borderColor: colors.borderDark,
-    borderWidth: 1,
-    paddingVertical: 14,
-    borderRadius: spacing.borderRadiusLg,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-  },
-  returnBtnText: {
-    color: colors.textPrimary,
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-});
+const Fila: React.FC<{ icono: 'pin' | 'clock' | 'arrowRight'; texto: string }> = ({
+  icono,
+  texto,
+}) => (
+  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+    {/* Arriba (no centrado): las direcciones largas ocupan 2–3 líneas con fuente grande. */}
+    <View style={{ paddingTop: 1 }}>
+      <Icon name={icono} size={16} color={colors.inkSoft} />
+    </View>
+    <Txt size={13} color={colors.inkSoft} leading={1.35} style={{ flex: 1 }}>
+      {texto}
+    </Txt>
+  </View>
+);

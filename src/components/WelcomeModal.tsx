@@ -1,91 +1,99 @@
 import React from 'react';
-import { StyleSheet, View, Text, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Modal, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../constants/colors';
 import { asistente } from '../constants/asistente';
-import { spacing } from '../constants/spacing';
-import { AuthButton } from './AuthButton';
-import { Glass, GlassScrim } from './Glass';
+import { radius } from '../constants/spacing';
+import { Button, Card, IconTile, IconName, Txt } from './ui';
 
 interface WelcomeModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
+const puntos: { icon: IconName; texto: string }[] = [
+  { icon: 'chat', texto: 'Conversa libremente sobre cómo te sientes' },
+  { icon: 'lock', texto: 'Espacio seguro y confidencial' },
+  { icon: 'phone', texto: 'Recursos de apoyo y líneas de ayuda' },
+];
+
+/** Presentación de la asistente la primera vez que se abre el chat. */
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ visible, onClose }) => {
+  const insets = useSafeAreaInsets();
+
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
-      <GlassScrim>
-        <Glass level="high" style={styles.card} contentStyle={styles.cardContent}>
-          <View style={styles.iconRow}>
-            <Ionicons name="compass-outline" size={32} color={colors.primary} />
-          </View>
-          <Text style={styles.title}>{asistente.nombre}</Text>
-          <Text style={styles.subtitle}>Tu acompañante para el bienestar mental</Text>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.scrim }}>
+        {/* Desplazable: en pantallas bajas (≈ 640 px) la tarjeta no se corta. */}
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            // Modal translúcido: safe areas a mano (laterales en apaisado / notch).
+            paddingLeft: insets.left + 24,
+            paddingRight: insets.right + 24,
+            paddingTop: insets.top + 24,
+            paddingBottom: insets.bottom + 24,
+          }}>
+          <Card
+            rounded={radius.card}
+            padding={24}
+            gap={18}
+            style={{ width: '100%', maxWidth: 360 }}>
+            <View style={{ alignItems: 'center', gap: 12 }}>
+              <View
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: colors.sage,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: colors.accent,
+                  }}
+                />
+              </View>
+              <View style={{ alignItems: 'center', gap: 4 }}>
+                <Txt size={24} weight="bold" tracking={-0.5} accessibilityRole="header">
+                  Hola, soy {asistente.nombre}
+                </Txt>
+                <Txt size={14} color={colors.inkSoft} align="center">
+                  {asistente.descripcion.charAt(0).toUpperCase() + asistente.descripcion.slice(1)}
+                </Txt>
+              </View>
+            </View>
 
-          <View style={styles.features}>
-            <View style={styles.featureRow}>
-              <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.primary} />
-              <Text style={styles.featureText}>Conversa libremente sobre cómo te sientes</Text>
+            <View style={{ gap: 12 }}>
+              {puntos.map((p) => (
+                <View key={p.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <IconTile name={p.icon} size={40} rounded={12} iconSize={18} />
+                  <Txt size={14.5} leading={1.35} style={{ flex: 1 }}>
+                    {p.texto}
+                  </Txt>
+                </View>
+              ))}
             </View>
-            <View style={styles.featureRow}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
-              <Text style={styles.featureText}>Espacio seguro y confidencial</Text>
-            </View>
-            <View style={styles.featureRow}>
-              <Ionicons name="call-outline" size={20} color={colors.primary} />
-              <Text style={styles.featureText}>Recursos de apoyo y líneas de emergencia</Text>
-            </View>
-          </View>
 
-          <AuthButton label="Comenzar" onPress={onClose} style={styles.cta} />
-        </Glass>
-      </GlassScrim>
+            <Button label="Comenzar" onPress={onClose} />
+          </Card>
+        </ScrollView>
+      </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    maxWidth: 340,
-  },
-  cardContent: {
-    padding: spacing.cardPadding,
-    alignItems: 'center',
-  },
-  iconRow: {
-    marginBottom: spacing.md,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  features: {
-    width: '100%',
-    marginBottom: spacing.xs,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  featureText: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    marginLeft: spacing.sm + 2,
-    flex: 1,
-  },
-  cta: {
-    width: '100%',
-  },
-});

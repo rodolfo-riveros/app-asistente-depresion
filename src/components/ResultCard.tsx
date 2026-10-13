@@ -1,186 +1,111 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import { HamiltonResult } from '../types/chat';
 import { colors } from '../constants/colors';
-import { spacing } from '../constants/spacing';
-import { glassGlow } from '../constants/glass';
 import { formatters } from '../utils/formatters';
-import { GlassCard } from './GlassCard';
+import { SCORE_MAXIMO } from '../services/diagnostico';
+import { Card, Divider, Txt } from './ui';
+import { fraseNivel, SeveridadSegmentos } from '../screens/registro/components/Severidad';
 
 interface ResultCardProps {
   resultado: HamiltonResult;
 }
 
-export const ResultCard: React.FC<ResultCardProps> = ({ resultado }) => {
-  const badgeColor = formatters.getSeverityColor(resultado.nivel);
+/** Resultado de una evaluación Hamilton con el estilo Aliento (tarjeta blanca plana). */
+export const ResultCard: React.FC<ResultCardProps> = ({ resultado }) => (
+  <Card gap={14}>
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 6,
+      }}>
+      <Txt size={15} weight="semibold">
+        Chequeo de ánimo
+      </Txt>
+      <View
+        style={{
+          backgroundColor: colors.sage,
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 8,
+          maxWidth: '100%',
+        }}>
+        <Txt size={12} weight="semibold" color={colors.forest}>
+          Hamilton · {resultado.nivel}
+        </Txt>
+      </View>
+    </View>
 
-  return (
-    <GlassCard level="low" style={styles.card} glowColor={badgeColor}>
-      {/* Level Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Resultado de la Evaluación</Text>
-        <View
-          style={[styles.badge, { backgroundColor: `${badgeColor}22`, borderColor: badgeColor }]}>
-          <Text style={[styles.badgeText, { color: badgeColor }]}>{resultado.nivel}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+      {/* La cifra grande escala poco con la fuente del sistema: el texto de al lado sí. */}
+      <Txt
+        size={40}
+        weight="bold"
+        tracking={-1}
+        maxFontSizeMultiplier={1.2}
+        style={{ lineHeight: 44 }}>
+        {resultado.score}
+      </Txt>
+      <Txt size={14} color={colors.inkSoft} style={{ flexShrink: 1 }}>
+        de {SCORE_MAXIMO} · {fraseNivel(resultado.nivel, resultado.score)}
+      </Txt>
+    </View>
+
+    <SeveridadSegmentos nivel={resultado.nivel} score={resultado.score} />
+
+    {resultado.fecha ? (
+      <Txt size={12.5} color={colors.inkSoft}>
+        {formatters.formatDate(resultado.fecha)}
+      </Txt>
+    ) : null}
+
+    {resultado.interpretacion ? (
+      <>
+        <Divider />
+        <View style={{ gap: 6 }}>
+          <Txt size={14} weight="semibold">
+            Qué significa
+          </Txt>
+          <Txt size={14} color={colors.inkSoft} leading={1.45}>
+            {resultado.interpretacion}
+          </Txt>
         </View>
-      </View>
+      </>
+    ) : null}
 
-      {/* Score Circle */}
-      <View style={styles.scoreContainer}>
-        <View style={[styles.scoreBadge, { borderColor: badgeColor }, glassGlow(badgeColor, 18)]}>
-          <Text style={styles.scoreNumber}>{resultado.score}</Text>
-          <Text style={styles.scoreMax}>/ 52</Text>
-        </View>
-        <Text style={styles.scoreLabel}>Puntaje Total (Hamilton 17)</Text>
-      </View>
-
-      {/* Clinical Interpretation */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Interpretación Clínica</Text>
-        <Text style={styles.interpretationText}>{resultado.interpretacion}</Text>
-      </View>
-
-      {/* Recommendations */}
-      {resultado.recomendaciones && resultado.recomendaciones.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recomendaciones Sugeridas</Text>
+    {resultado.recomendaciones?.length ? (
+      <>
+        <Divider />
+        <View style={{ gap: 10 }}>
+          <Txt size={14} weight="semibold">
+            Recomendaciones
+          </Txt>
           {resultado.recomendaciones.map((rec, i) => (
-            <View key={i} style={styles.recRow}>
-              <Ionicons
-                name="chevron-forward"
-                size={12}
-                color={colors.primary}
-                style={styles.bullet}
+            <View key={i} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  marginTop: 6,
+                  backgroundColor: colors.moss,
+                  flexShrink: 0,
+                }}
               />
-              <Text style={styles.recText}>{rec}</Text>
+              <Txt size={14} leading={1.4} style={{ flex: 1 }}>
+                {rec}
+              </Txt>
             </View>
           ))}
         </View>
-      )}
+      </>
+    ) : null}
 
-      {/* Disclaimer */}
-      <View style={styles.disclaimerBox}>
-        <Ionicons
-          name="information-circle-outline"
-          size={16}
-          color={colors.primary}
-          style={styles.disclaimerIcon}
-        />
-        <Text style={styles.disclaimerText}>
-          Este resultado es una herramienta de orientación psicoeducativa y NO constituye un
-          diagnóstico clínico formal. Se recomienda compartirlo con un profesional de la salud
-          mental.
-        </Text>
-      </View>
-    </GlassCard>
-  );
-};
-
-const styles = StyleSheet.create({
-  card: {
-    marginVertical: spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    flexShrink: 1,
-    marginRight: spacing.sm,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  badgeText: {
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  scoreContainer: {
-    alignItems: 'center',
-    marginVertical: spacing.md,
-  },
-  scoreBadge: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  scoreNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  scoreMax: {
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  scoreLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  section: {
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderDark,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: spacing.xs + 2,
-  },
-  interpretationText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  recRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 6,
-  },
-  bullet: {
-    marginRight: 8,
-    marginTop: 3,
-  },
-  recText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    flexShrink: 1,
-    lineHeight: 18,
-  },
-  disclaimerBox: {
-    flexDirection: 'row',
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-    padding: spacing.md,
-    borderRadius: spacing.borderRadiusMd,
-    marginTop: spacing.lg,
-    alignItems: 'flex-start',
-  },
-  disclaimerIcon: {
-    marginRight: 8,
-    marginTop: 1,
-  },
-  disclaimerText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 17,
-    flexShrink: 1,
-  },
-});
+    <Txt size={12.5} color={colors.inkSoft} leading={1.4}>
+      Es una orientación, no un diagnóstico. Solo un profesional puede evaluarte.
+    </Txt>
+  </Card>
+);

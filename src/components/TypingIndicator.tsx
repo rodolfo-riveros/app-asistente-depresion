@@ -1,106 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Animated } from 'react-native';
+import { Animated, View } from 'react-native';
 import { colors } from '../constants/colors';
 import { asistente } from '../constants/asistente';
-import { spacing } from '../constants/spacing';
-import { AvatarAssistant } from './AvatarAssistant';
-import { Glass } from './Glass';
 
+/** Tres puntos que laten dentro de una burbuja del asistente. */
 export const TypingIndicator: React.FC = () => {
-  const [dot1] = useState(() => new Animated.Value(0.3));
-  const [dot2] = useState(() => new Animated.Value(0.3));
-  const [dot3] = useState(() => new Animated.Value(0.3));
+  const [dots] = useState(() => [0, 1, 2].map(() => new Animated.Value(0.3)));
 
   useEffect(() => {
-    const createPulse = (dot: Animated.Value, delay: number) => {
-      return Animated.loop(
+    const animaciones = dots.map((dot, i) =>
+      Animated.loop(
         Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(dot, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot, {
-            toValue: 0.3,
-            duration: 400,
-            useNativeDriver: true,
-          }),
+          Animated.delay(i * 200),
+          Animated.timing(dot, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0.3, duration: 400, useNativeDriver: true }),
         ])
-      );
-    };
-
-    const anim1 = createPulse(dot1, 0);
-    const anim2 = createPulse(dot2, 200);
-    const anim3 = createPulse(dot3, 400);
-
-    anim1.start();
-    anim2.start();
-    anim3.start();
-
-    return () => {
-      anim1.stop();
-      anim2.stop();
-      anim3.stop();
-    };
-  }, [dot1, dot2, dot3]);
+      )
+    );
+    animaciones.forEach((a) => a.start());
+    return () => animaciones.forEach((a) => a.stop());
+  }, [dots]);
 
   return (
-    <View style={styles.container}>
-      <AvatarAssistant size="sm" emotion="listening" />
-      <Glass
-        level="base"
-        style={styles.bubble}
-        radius={spacing.borderRadiusLg}
-        radiusStyle={styles.bubbleRadius}
-        contentStyle={styles.bubbleContent}>
-        <Text style={styles.typingText}>{asistente.nombre} está respondiendo</Text>
-        <View style={styles.dotsRow}>
-          <Animated.View style={[styles.dot, { opacity: dot1 }]} />
-          <Animated.View style={[styles.dot, { opacity: dot2 }]} />
-          <Animated.View style={[styles.dot, { opacity: dot3 }]} />
-        </View>
-      </Glass>
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={`${asistente.nombre} está escribiendo`}
+      style={{
+        alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: colors.surface,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        borderBottomRightRadius: 18,
+        borderBottomLeftRadius: 6,
+      }}>
+      {dots.map((dot, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: 4,
+            backgroundColor: colors.moss,
+            opacity: dot,
+          }}
+        />
+      ))}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.xs,
-    marginLeft: spacing.sm,
-  },
-  bubble: {
-    marginLeft: spacing.sm,
-  },
-  bubbleRadius: {
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: spacing.borderRadiusLg,
-    borderBottomLeftRadius: spacing.borderRadiusLg,
-    borderBottomRightRadius: spacing.borderRadiusLg,
-  },
-  bubbleContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-  },
-  typingText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginRight: spacing.xs,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-    marginHorizontal: 2,
-  },
-});
