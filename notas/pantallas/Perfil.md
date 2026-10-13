@@ -57,3 +57,7 @@
 
 ## Privacidad y términos (2026-10-12)
 - Enlaces/fila abren `Legal` (privacidad o términos). Ver [[Decisiones]].
+
+## Chat como amiga (2026-10-12)
+Ver [[Chat como amiga]].
+- Fila **"Ubicación"** en Ajustes (tras la voz): "Activada · para recomendarte centros cercanos" con ✓, o "Permitir" (diálogo del sistema) / "Abrir ajustes" (bloqueada). Se actualiza sola al volver de Ajustes (`usePermisoUbicacion`).

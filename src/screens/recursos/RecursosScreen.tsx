@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo, useState } from 'react';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
   Platform,
@@ -81,11 +81,29 @@ const Pulsable: React.FC<{
   </Pressable>
 );
 
-export const RecursosScreen: React.FC<TabScreenProps<'RecursosTab'>> = ({ navigation }) => {
+/** Todos los recursos por id (para abrir uno desde un botón del chat). */
+const porId = (id: string): Recurso | null =>
+  [guiaDepresion, ...ejercicios].find((r) => r.id === id) ?? null;
+
+export const RecursosScreen: React.FC<TabScreenProps<'RecursosTab'>> = ({ navigation, route }) => {
   const { escala, compacto } = useLayout();
   const [consulta, setConsulta] = useState('');
   const [categoria, setCategoria] = useState<Categoria | 'todo'>('todo');
   const [abierto, setAbierto] = useState<Recurso | null>(null);
+
+  // `abrir` (desde el chat): abre esa guía. Se ajusta durante el render (estado
+  // derivado de un parámetro) y luego se limpia el parámetro, así el mismo
+  // recurso puede volver a abrirse más tarde desde otro mensaje.
+  const pedido = route.params?.abrir;
+  const [pedidoVisto, setPedidoVisto] = useState<string | undefined>(undefined);
+  if (pedido !== pedidoVisto) {
+    setPedidoVisto(pedido);
+    const recurso = pedido ? porId(pedido) : null;
+    if (recurso) setAbierto(recurso);
+  }
+  useEffect(() => {
+    if (pedido) navigation.setParams({ abrir: undefined });
+  }, [pedido, navigation]);
 
   const lista = useMemo(
     () => ejercicios.filter((e) => coincide(e, consulta, categoria)),

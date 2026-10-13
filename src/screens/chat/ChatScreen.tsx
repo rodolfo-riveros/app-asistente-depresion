@@ -16,7 +16,10 @@ import * as Haptics from 'expo-haptics';
 import { ChatBubble } from '../../components/ChatBubble';
 import { TypingIndicator } from '../../components/TypingIndicator';
 import { CrisisAlert } from '../../components/CrisisAlert';
-import { LocationPermissionModal } from '../../components/LocationPermissionModal';
+import { PermisoUbicacionHoja } from '../../components/PermisoUbicacion';
+import { usePermisoUbicacion } from '../../hooks/usePermisoUbicacion';
+import { ubicacionActual } from '../../services/ubicacion';
+import { AccionesMensaje } from './components/AccionesMensaje';
 import { WelcomeModal } from '../../components/WelcomeModal';
 import { PermisoMicrofono } from '../../components/PermisoMicrofono';
 import { Button, Icon, Txt } from '../../components/ui';
@@ -76,6 +79,8 @@ const trasCerrarModal = (fn: () => void) => setTimeout(fn, TRAS_CERRAR_MODAL_MS)
 const MARGEN_LATERAL = 16;
 /** Proporción del ancho de contenido que puede ocupar una burbuja… */
 const PROPORCION_BURBUJA = 0.78;
+/** Ancho de los botones de acción bajo una burbuja de la asistente. */
+const PROPORCION_ACCIONES = 0.9;
 /** …con techo para que en tablet no salgan renglones de 500 px (≈ 60 caracteres). */
 const TECHO_BURBUJA = 440;
 /** Columna centrada en tablet: el fondo sigue a pantalla completa. */
@@ -99,6 +104,7 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
   const { anchoContenido, ios } = useLayout();
   const dictado = useDictado();
   const permiso = usePermisoMicrofono();
+  const permisoUbicacion = usePermisoUbicacion();
 
   const [texto, setTexto] = useState('');
   const [showWelcome, setShowWelcome] = useState(false);
@@ -258,8 +264,18 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
     pidiendoPermiso && (permiso.estado === 'bloqueado' ? 'bloqueado' : 'pendiente');
   const mostrarTarjetaPermiso = pidiendoPermiso && permiso.estado !== 'concedido';
 
-  // --- Ubicación (la pide el backend en crisis, o el usuario desde el aviso) ---
-  const locationModalVisible = showLocationModal || ubicacionSolicitada;
+  // --- Ubicación (la pide el backend, o el usuario desde el aviso de crisis) ---
+  // Con el permiso concedido la app ya manda lat/lon en cada mensaje (ChatContext),
+  // así que la tarjeta sólo aparece si falta el permiso.
+  const sinPermisoUbicacion =
+    permisoUbicacion.estado === 'pendiente' || permisoUbicacion.estado === 'bloqueado';
+  const hojaUbicacionVisible = (showLocationModal || ubicacionSolicitada) && sinPermisoUbicacion;
+
+  // Si el permiso se activó (p. ej. desde Ajustes) con la petición manual abierta,
+  // se descarta la petición (estado derivado durante el render, sin efecto).
+  if (showLocationModal && permisoUbicacion.estado === 'concedido') {
+    setShowLocationModal(false);
+  }
 
   const cerrarLocationModal = () => {
     setShowLocationModal(false);
@@ -271,13 +287,36 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
     setShowCentros(true);
   };
 
-  const concederUbicacion = async () => {
-    cerrarLocationModal();
-    const loc = await locationService.getCurrentLocation();
-    trasCerrarModal(mostrarCentros);
+  const compartirUbicacion = async () => {
+    const loc = await ubicacionActual();
     if (loc) {
       sendMessage('He compartido mi ubicación para buscar centros cercanos.', loc.lat, loc.lon);
     }
+  };
+
+  // Funciones del contexto en una ref: el efecto de abajo sólo depende del permiso.
+  const compartirRef = useRef(compartirUbicacion);
+  const limpiarSolicitudRef = useRef(clearUbicacionSolicitada);
+  useEffect(() => {
+    compartirRef.current = compartirUbicacion;
+    limpiarSolicitudRef.current = clearUbicacionSolicitada;
+  });
+
+  // El backend pidió la ubicación pero el permiso ya está (o se acaba de activar
+  // en Ajustes): no hace falta preguntar, se comparte directamente.
+  useEffect(() => {
+    if (!ubicacionSolicitada || permisoUbicacion.estado !== 'concedido') return;
+    limpiarSolicitudRef.current();
+    compartirRef.current();
+  }, [ubicacionSolicitada, permisoUbicacion.estado]);
+
+  const concederUbicacion = async () => {
+    // Se cierra antes del diálogo del sistema: así el efecto de arriba no
+    // vuelve a compartir cuando el permiso pase a `concedido`.
+    cerrarLocationModal();
+    const estado = await permisoUbicacion.pedir();
+    trasCerrarModal(mostrarCentros);
+    if (estado === 'concedido') await compartirUbicacion();
   };
 
   const denegarUbicacion = () => {
@@ -286,10 +325,12 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
   };
 
   // Desde el aviso de crisis: se cierra el aviso (sigue a un toque en "Ayuda ya") y luego
-  // se pregunta por la ubicación; dos Modal a la vez fallan en iOS.
+  // se pregunta por la ubicación; dos Modal a la vez fallan en iOS. Con el permiso
+  // concedido se va directo a los centros.
   const pedirUbicacionDesdeCrisis = () => {
     closeCrisisModal();
-    trasCerrarModal(() => setShowLocationModal(true));
+    if (permisoUbicacion.estado === 'concedido') trasCerrarModal(mostrarCentros);
+    else trasCerrarModal(() => setShowLocationModal(true));
   };
 
   const abrirProtocolo = () => {
@@ -315,12 +356,24 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
     Math.round((anchoContenido - MARGEN_LATERAL * 2) * PROPORCION_BURBUJA)
   );
 
-  const renderFila = ({ item }: { item: Fila }) =>
-    item.tipo === 'fecha' ? (
-      <SeparadorFecha etiqueta={item.etiqueta} />
-    ) : (
-      <ChatBubble message={item.mensaje} anchoMaximo={anchoBurbuja} />
+  // Los botones de acción pueden ser algo más anchos que la burbuja (caben dos píldoras).
+  const anchoAcciones = Math.min(
+    TECHO_BURBUJA,
+    Math.round((anchoContenido - MARGEN_LATERAL * 2) * PROPORCION_ACCIONES)
+  );
+
+  const renderFila = ({ item }: { item: Fila }) => {
+    if (item.tipo === 'fecha') return <SeparadorFecha etiqueta={item.etiqueta} />;
+    const { mensaje } = item;
+    const acciones = mensaje.role === 'assistant' ? mensaje.acciones : undefined;
+    if (!acciones?.length) return <ChatBubble message={mensaje} anchoMaximo={anchoBurbuja} />;
+    return (
+      <View style={{ gap: 8 }}>
+        <ChatBubble message={mensaje} anchoMaximo={anchoBurbuja} />
+        <AccionesMensaje acciones={acciones} anchoMaximo={anchoAcciones} />
+      </View>
     );
+  };
 
   // Respuesta al toque: onda sutil en Android, opacidad en iOS.
   const rippleClaro = { color: colors.ripple, foreground: true } as const;
@@ -598,10 +651,12 @@ export const ChatScreen: React.FC<RootScreenProps<'Chat'>> = ({ navigation, rout
         }}
       />
 
-      <LocationPermissionModal
-        visible={locationModalVisible}
-        onGrant={concederUbicacion}
-        onDeny={denegarUbicacion}
+      <PermisoUbicacionHoja
+        visible={hojaUbicacionVisible}
+        estado={permisoUbicacion.estado === 'bloqueado' ? 'bloqueado' : 'pendiente'}
+        onPedir={concederUbicacion}
+        onAbrirAjustes={permisoUbicacion.abrirAjustes}
+        onCerrar={denegarUbicacion}
       />
 
       <CentrosSheet visible={showCentros} centros={centros} onClose={() => setShowCentros(false)} />

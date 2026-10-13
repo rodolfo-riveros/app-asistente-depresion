@@ -56,3 +56,9 @@
 - Teclado: `keyboardVerticalOffset = −max(insets.bottom, 8)` **es correcto en ambos sistemas** (razonamiento completo en el comentario de `ChatScreen`): el alto del teclado de keyboard-controller se mide desde el borde inferior de la pantalla (iOS con home indicator; Android con barra de gestos o 3 botones porque `KeyboardProvider` tiene `navigationBarTranslucent`), y la barra ya reserva esa holgura. Sin el offset habría un hueco del tamaño de la safe area sobre el teclado. Si algún día se quita `navigationBarTranslucent` del `KeyboardProvider`, en Android habría que poner el offset a 0.
 - `keyboardDismissMode` por plataforma; `TextInput` con `maxFontSizeMultiplier 1.35`.
 - Ondas Android en mic/enviar (opacidad sólo en iOS). Modales: `CrisisAlert` y `CentrosSheet` centrados con `maxWidth` en tablet, insets laterales en todos; Ubicación apila botones con letra grande en 360 px. Ondas con `colors.ripple`/`rippleOnDark`.
+
+## Chat como amiga (2026-10-12)
+Ver [[Chat como amiga]].
+- **Botones de acción** bajo la burbuja de la asistente (`components/AccionesMensaje.tsx`), cuando el mensaje trae `acciones`: música (Spotify / YouTube Music), recurso (abre la guía en Recursos), centro (Cómo llegar / Llamar), buscar en Google Maps, llamar, actividad (→ Actividades). Filas/tarjetas blancas radio 18 con `IconTile`, píldoras `Button sm` (≥ 44 px), apiladas en 360 px o con fuente grande; ancho ≈ 90 % del contenido (techo 440). Onda Android `colors.ripple`, opacidad iOS.
+- **Ubicación**: `LocationPermissionModal` se sustituye por `PermisoUbicacionHoja` (estado real del permiso, "Abrir ajustes" si está bloqueado). Sólo aparece si falta el permiso; con permiso, `ubicacion_solicitada` comparte la posición sola y "Buscar centros cercanos" (crisis) abre directamente la hoja de centros.
+- Los mensajes ya llevan lat/lon automáticamente (`ChatContext`), sin bloquear el envío más de ~1,5 s.

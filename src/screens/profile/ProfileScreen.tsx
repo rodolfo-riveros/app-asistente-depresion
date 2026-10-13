@@ -19,6 +19,7 @@ import { radius } from '../../constants/spacing';
 import { useAuth } from '../../hooks/useAuth';
 import { ANCHO_MAXIMO, useLayout } from '../../hooks/useLayout';
 import { usePermisoNotificaciones } from '../../hooks/usePermisoNotificaciones';
+import { usePermisoUbicacion } from '../../hooks/usePermisoUbicacion';
 import { cadaFranja, recordatorio } from '../../services/recordatorio';
 import type { TabScreenProps } from '../../navigation/types';
 import { Diagnostico, diagnosticoService } from '../../services/diagnostico';
@@ -221,6 +222,7 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
   const [eligiendoHora, setEligiendoHora] = useState(false);
 
   const permiso = usePermisoNotificaciones();
+  const permisoUbicacion = usePermisoUbicacion();
 
   /** Preferencias y persona de confianza viven en el teléfono: no esperan a la red. */
   const cargarLocal = useCallback(async () => {
@@ -631,6 +633,37 @@ export const ProfileScreen: React.FC<TabScreenProps<'PerfilTab'>> = ({ navigatio
         </FilaAjuste>
         <Divider />
         <VozAjuste />
+        <Divider />
+        <FilaAjuste
+          titulo="Ubicación"
+          detalle={
+            permisoUbicacion.estado === 'concedido'
+              ? 'Activada · para recomendarte centros cercanos'
+              : permisoUbicacion.estado === 'bloqueado'
+                ? 'Desactivada en los ajustes del teléfono'
+                : permisoUbicacion.estado === 'pendiente'
+                  ? 'Para recomendarte centros de salud mental cercanos'
+                  : 'Comprobando…'
+          }>
+          {permisoUbicacion.estado === 'concedido' ? (
+            <Icon name="check" size={20} color={colors.forest} strokeWidth={2} />
+          ) : permisoUbicacion.estado === 'bloqueado' ? (
+            <Button
+              label="Abrir ajustes"
+              size="sm"
+              variant="outline"
+              onPress={permisoUbicacion.abrirAjustes}
+              accessibilityHint="Abre los ajustes del teléfono para activar la ubicación"
+            />
+          ) : permisoUbicacion.estado === 'pendiente' ? (
+            <Button
+              label="Permitir"
+              size="sm"
+              onPress={() => permisoUbicacion.pedir()}
+              accessibilityHint="Muestra el aviso del sistema para permitir la ubicación"
+            />
+          ) : null}
+        </FilaAjuste>
         <Divider />
         <FilaAjuste
           titulo="Privacidad y datos"

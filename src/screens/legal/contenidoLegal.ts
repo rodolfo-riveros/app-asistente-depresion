@@ -55,7 +55,7 @@ export const privacidad: SeccionLegal[] = [
       `Para que ${asistente.nombre} pueda responder, tus mensajes se envían a un proveedor de inteligencia artificial (por ejemplo DeepSeek o Google Gemini, según disponibilidad). Solo se envía lo necesario para generar la respuesta.`,
       'Si hablas por voz, el audio se envía a un servicio de transcripción para convertirlo en texto y no se guarda como audio.',
       'Si activas la voz en la nube, el texto de las respuestas se envía a Microsoft Azure para leerlo en voz alta.',
-      'Si pides centros de salud cercanos, tu ubicación se usa en ese momento para ordenarlos por distancia.',
+      `Si permites la ubicación, tu posición aproximada se envía con tus mensajes para que ${asistente.nombre} pueda recomendarte los centros de salud mental más cercanos. Puedes quitar el permiso cuando quieras en Perfil o en los ajustes del teléfono.`,
     ],
   },
   {

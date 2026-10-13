@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +25,9 @@ import { Diagnostico, diagnosticoService } from '../../services/diagnostico';
 import type { TabScreenProps } from '../../navigation/types';
 import { PermisoNotificaciones } from '../../components/PermisoNotificaciones';
 import { usePermisoNotificaciones } from '../../hooks/usePermisoNotificaciones';
+import { PermisoUbicacionHoja } from '../../components/PermisoUbicacion';
+import { usePermisoUbicacion } from '../../hooks/usePermisoUbicacion';
+import { marcarUbicacionPreguntada, yaSePreguntoUbicacion } from '../../services/ubicacion';
 import { recordatorio } from '../../services/recordatorio';
 import { Preferencias, preferencias } from '../../utils/preferencias';
 import {
@@ -229,6 +232,44 @@ export const InicioScreen: React.FC<TabScreenProps<'InicioTab'>> = ({ navigation
   // `true` hasta leer AsyncStorage: así el aviso no parpadea si ya se cerró.
   const [avisoCerrado, setAvisoCerrado] = useState(true);
   const permiso = usePermisoNotificaciones();
+
+  // Ubicación (decisión del usuario: se pide al crear la cuenta). Como tras el
+  // registro la app entra sola aquí, la hoja sale una vez por persona: tras
+  // registrarse o al iniciar sesión sin haberla concedido nunca.
+  const permisoUbicacion = usePermisoUbicacion();
+  const usuarioId = user?.id ?? null;
+  // `true` hasta leer AsyncStorage: así la hoja no parpadea si ya se preguntó.
+  const [ubicacionPreguntada, setUbicacionPreguntada] = useState(true);
+  useEffect(() => {
+    if (!usuarioId) return;
+    let activo = true;
+    yaSePreguntoUbicacion(usuarioId).then((v) => activo && setUbicacionPreguntada(v));
+    return () => {
+      activo = false;
+    };
+  }, [usuarioId]);
+  // Con el permiso ya concedido no hay nada que preguntar: se anota y listo.
+  useEffect(() => {
+    if (usuarioId && permisoUbicacion.estado === 'concedido') {
+      marcarUbicacionPreguntada(usuarioId);
+    }
+  }, [usuarioId, permisoUbicacion.estado]);
+  const hojaUbicacion =
+    !ubicacionPreguntada &&
+    (permisoUbicacion.estado === 'pendiente' || permisoUbicacion.estado === 'bloqueado');
+
+  const cerrarHojaUbicacion = () => {
+    setUbicacionPreguntada(true);
+    if (usuarioId) marcarUbicacionPreguntada(usuarioId);
+  };
+  const permitirUbicacion = () => {
+    cerrarHojaUbicacion();
+    permisoUbicacion.pedir();
+  };
+  const ajustesUbicacion = () => {
+    cerrarHojaUbicacion();
+    permisoUbicacion.abrirAjustes();
+  };
 
   /** Datos del dispositivo: no esperan a la red (el ánimo se ve al instante sin conexión). */
   const cargarLocal = useCallback(async () => {
@@ -491,6 +532,14 @@ export const InicioScreen: React.FC<TabScreenProps<'InicioTab'>> = ({ navigation
         )}
 
       <HelpButton variant="bar" onPress={llamarAyuda} style={{ marginTop: 'auto' }} />
+
+      <PermisoUbicacionHoja
+        visible={hojaUbicacion}
+        estado={permisoUbicacion.estado === 'bloqueado' ? 'bloqueado' : 'pendiente'}
+        onPedir={permitirUbicacion}
+        onAbrirAjustes={ajustesUbicacion}
+        onCerrar={cerrarHojaUbicacion}
+      />
     </Screen>
   );
 };

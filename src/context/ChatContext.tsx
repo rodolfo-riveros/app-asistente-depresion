@@ -5,6 +5,9 @@ import { api } from '../services/api';
 import { storage } from '../utils/storage';
 import { asistente } from '../constants/asistente';
 import { useAuth } from '../hooks/useAuth';
+import { normalizarAcciones } from '../utils/acciones';
+import { olvidarUbicacion, ubicacionRapida } from '../services/ubicacion';
+import type { MensajeGuardado } from '../types/api';
 
 interface ChatContextType {
   messages: ChatMessage[];
@@ -35,16 +38,20 @@ const initialGreeting: ChatMessage = {
 };
 
 /** Convierte la transcripción guardada en el servidor a mensajes de la UI. */
-const aMensajesUI = (
-  guardados: { rol: string; contenido: string; creado_en: string }[]
-): ChatMessage[] =>
-  guardados.map((m, i) => ({
-    id: `msg-hist-${i}`,
-    role: m.rol === 'user' ? 'user' : 'assistant',
-    content: m.contenido,
-    timestamp: m.creado_en || new Date().toISOString(),
-    emotion: m.rol === 'user' ? undefined : 'empathetic',
-  }));
+const aMensajesUI = (guardados: MensajeGuardado[]): ChatMessage[] =>
+  guardados.map((m, i) => {
+    const esUsuario = m.rol === 'user';
+    // Tolerante: mensajes antiguos (o un backend sin v4) no traen `acciones`.
+    const acciones = esUsuario ? [] : normalizarAcciones(m.acciones);
+    return {
+      id: `msg-hist-${i}`,
+      role: esUsuario ? 'user' : 'assistant',
+      content: m.contenido,
+      timestamp: m.creado_en || new Date().toISOString(),
+      emotion: esUsuario ? undefined : 'empathetic',
+      ...(acciones.length > 0 ? { acciones } : {}),
+    };
+  });
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -76,6 +83,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCurrentEmotion('listening');
       setLoading(false);
       setRestaurando(true);
+      olvidarUbicacion();
     }
   }
 
@@ -127,9 +135,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
 
     try {
+      // v4: si hay permiso de ubicación, cada mensaje lleva lat/lon para que la
+      // asistente recomiende los centros más cercanos. Nunca se pide permiso
+      // aquí, y no se espera al GPS más de ~1,5 s (sigue en segundo plano y la
+      // posición queda en caché para el siguiente mensaje).
+      let coords = lat !== undefined && lon !== undefined ? { lat, lon } : null;
+      if (!coords) coords = await ubicacionRapida();
+
       // Sin sesion_id: el backend elige el hilo único de la persona (v2). Se
       // guarda el que devuelve sólo como dato informativo.
-      const response = await chatService.sendMessage(texto, undefined, lat, lon);
+      const response = await chatService.sendMessage(texto, undefined, coords?.lat, coords?.lon);
       setSesionId(response.sesion_id);
 
       const assistantText = response.respuesta || 'Te escucho atentamente...';
@@ -144,12 +159,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setCurrentEmotion(emotion);
 
+      const acciones = normalizarAcciones(response.acciones);
       const assistantMsg: ChatMessage = {
         id: 'msg-ast-' + Date.now(),
         role: 'assistant',
         content: assistantText,
         timestamp: new Date().toISOString(),
         emotion,
+        ...(acciones.length > 0 ? { acciones } : {}),
       };
 
       setMessages((prev) => [...prev, assistantMsg]);

@@ -42,3 +42,8 @@
 - `Respiracion478`: círculo `tablet ? 232 : escala(compacto ? 172 : 200)`, textos internos con multiplicador 1.2.
 - `CrisisProtocolScreen`: pares Llamar/Copiar y teléfono/Cómo llegar apilados a ancho completo en 360 px o con fuente al 130 % ("Llamar al 113" pasa a botón grande); título de centros con `flexBasis` para que el botón de ubicación baje de línea; iconos de dirección/horario alineados arriba.
 - `ErrorBoundary`: safe area 4 bordes, scroll, columna centrada `maxWidth 480`, botón corto "Llamar al 113".
+
+## Chat como amiga (2026-10-12)
+Ver [[Chat como amiga]].
+- Nuevo parámetro `RecursosTab: { abrir?: RecursoId }`: desde un botón del chat se navega a `MainApp › RecursosTab { abrir }` y la pantalla abre el `GuiaModal` de ese recurso (estado derivado durante el render) y luego limpia el parámetro con `setParams`, para que el mismo recurso pueda volver a abrirse desde otro mensaje.
+- Los ids (`RecursoId` en `types/chat.ts`) son los de `contenido.ts`; si se añade un recurso hay que añadirlo también a `RecursoId`, a `utils/acciones.ts` y al backend.

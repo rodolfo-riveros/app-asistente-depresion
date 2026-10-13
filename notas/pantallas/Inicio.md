@@ -43,3 +43,7 @@
 - Check-in: en compacto padding 12, gap 4, orbe 24. "Muy mal"/"Muy bien" parten en 2 líneas; "Regular" se encoge (`adjustsFontSizeToFit`, `minimumFontScale 0.75`). Celdas alineadas arriba.
 - Toques: `components/Tocable.tsx` (onda Android recortada al radio con `overflow: 'hidden'`, opacidad en iOS) en Escribir/Hablar, "Tu registro semanal", "Para hoy" y su estado vacío. Tokens `colors.ripple` / `rippleOnDark`.
 - TabBar: alto de fila fijo (54), safe area inferior según plataforma (iOS `inset − 8`, Android `inset + 6`, 12 sin inset), pestañas centradas a 560 en tablets.
+
+## Chat como amiga (2026-10-12)
+Ver [[Chat como amiga]].
+- **Hoja de ubicación** (`PermisoUbicacionHoja`) una vez por persona: tras crear la cuenta (la app entra sola en Inicio) y a quien inicie sesión sin haberla concedido nunca. Flag `@ubicacion_preguntada` (lista de ids de usuario). "Permitir" → diálogo del sistema; "Ahora no" o tocar fuera → no vuelve a salir (queda la fila en Perfil); "Abrir ajustes" si está bloqueada. Con el permiso ya concedido no se muestra y se anota.

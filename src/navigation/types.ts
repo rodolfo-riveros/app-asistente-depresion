@@ -1,13 +1,14 @@
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import type { HamiltonResult } from '../types/chat';
+import type { HamiltonResult, RecursoId } from '../types/chat';
 
 /** Pestañas de la barra inferior (diseño: Inicio · Registro · Recursos · Perfil). */
 export type TabParamList = {
   InicioTab: undefined;
   RegistroTab: undefined;
-  RecursosTab: undefined;
+  /** `abrir`: abre la guía de ese recurso (p. ej. desde un botón del chat). */
+  RecursosTab: { abrir?: RecursoId } | undefined;
   PerfilTab: undefined;
 };
 

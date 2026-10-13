@@ -1,4 +1,4 @@
-import { HamiltonResult } from './chat';
+import { Accion, HamiltonResult } from './chat';
 
 export interface ChatMessageRequest {
   sesion_id?: string;
@@ -16,10 +16,14 @@ export interface ChatMessageResponse {
   ubicacion_solicitada?: boolean;
   /** Sólo llega en el turno en que el asistente cierra la evaluación. */
   resultado?: HamiltonResult;
+  /** Botones de acción de esta respuesta (v4). Opcional: un backend anterior no lo manda. */
+  acciones?: Accion[] | null;
 }
 
 export interface MensajeGuardado {
   rol: 'user' | 'assistant';
   contenido: string;
   creado_en: string;
+  /** Botones guardados con el mensaje (`mensajes.acciones`); `null` en mensajes antiguos. */
+  acciones?: Accion[] | null;
 }

@@ -21,7 +21,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Usamos tu ubicación solo cuando la pides, para mostrarte los centros de salud mental más cercanos."
+          "locationWhenInUsePermission": "Usamos tu ubicación mientras usas la app para recomendarte los centros de salud mental más cercanos a ti."
         }
       ],
       [
